@@ -57,9 +57,17 @@ class Result:
         return np.cumsum(self.ras_rate)
 
 
+_WEATHER_CACHE = {}
+
+
 def _weather(var, start, end, idx):
-    a = hrrr.load(var, start, end).reshape(-1, LATTICE.ny * LATTICE.nx)
-    return a[:, idx]
+    """Hourly HRRR field at lakebed cells. Cached: scenarios and ensemble members
+    reuse identical weather, so it is read from disk once per process."""
+    key = (var, pd.Timestamp(start).value, pd.Timestamp(end).value, idx.tobytes().__hash__())
+    if key not in _WEATHER_CACHE:
+        a = hrrr.load(var, start, end).reshape(-1, LATTICE.ny * LATTICE.nx)
+        _WEATHER_CACHE[key] = np.ascontiguousarray(a[:, idx])
+    return _WEATHER_CACHE[key]
 
 
 def run(setup: Setup, levels_ft: pd.DataFrame, p: dict, start, end, eta=None) -> Result:

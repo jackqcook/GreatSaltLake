@@ -27,6 +27,17 @@ def test_step_matches_numerical_solution():
         assert np.allclose([S[0], I[0], tv[0], rm[0]], [Sr, Ir, Rr, Lr], rtol=1e-6, atol=1e-9), (S0, I0, G, b, kV, kL)
 
 
+def test_tiny_beta_is_stable():
+    # a cell barely above threshold: beta ~ 1e-24 /s with steady replenishment
+    for b in (1e-24, 1e-15, 1e-9):
+        S, I, em, tv, rm = ode.step(np.array([1e5]), np.array([0.0]), np.array([1e-3]), np.array([b]),
+                                    np.array([1e-3]), np.array([1e-5]))
+        expected = b * 1e5 * 3600.0  # to first order
+        assert em[0] >= 0 and np.isclose(em[0], expected, rtol=1e-3, atol=1e-12), (b, em[0], expected)
+        assert tv[0] >= 0 and rm[0] >= 0
+        assert np.isclose(S[0] - 1e5 + em[0], 1e-3 * 3600.0, rtol=1e-12)
+
+
 def test_mass_is_conserved_over_a_run():
     rng = np.random.default_rng(0)
     n, T = 50, 200
