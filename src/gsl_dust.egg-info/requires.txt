@@ -1,0 +1,12 @@
+numpy
+pandas
+scipy
+pyarrow
+requests
+matplotlib
+rasterio
+pyproj
+shapely
+
+[dev]
+pytest
