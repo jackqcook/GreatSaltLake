@@ -51,7 +51,7 @@
   <div class="sub">A stage-by-stage plan built entirely on <b>GSL_Dust_Model_Guide.pdf</b>, the project's modeling
   standard. Every stage follows the guide's build order, every method follows the guide's component table, and every
   assumption the guide asks us to test is assigned to a stage where it gets tested.</div>
-  <div class="meta">Prepared 30 September 2026 &middot; Items marked <span class="v">VERIFIED</span> were checked against the live
+  <div class="meta">Prepared 30 September 2026, updated the same day with findings from the build &middot; Items marked <span class="v">VERIFIED</span> were checked against the live
   source on that date<br>Supersedes the earlier "V2 Implementation Plan" &middot; Standard: docs/GSL_Dust_Model_Guide.pdf</div>
 </div>
 
@@ -166,11 +166,18 @@ must reproduce those tables. That's a direct check on the grid, the basin tags, 
 <h3>1.3 Hourly inputs</h3>
 <table>
 <tr><th style="width:24%">Input</th><th style="width:36%">Source</th><th>Used by</th></tr>
-<tr><td>Friction velocity u*<sub>i</sub>(t)</td><td>NOAA HRRR surface field <code>FRICV</code> <span class="v">VERIFIED</span>, checked against local weather stations</td><td>&beta;<sub>i</sub>(t) threshold law (Stage 2)</td></tr>
+<tr><td>Friction velocity u*<sub>i</sub>(t)</td><td>NOAA HRRR 10 m winds with a playa roughness length (log law); HRRR's own <code>FRICV</code> kept only as a diagnostic (see box below)</td><td>&beta;<sub>i</sub>(t) threshold law (Stage 2)</td></tr>
 <tr><td>Winds and mixing</td><td>NOAA HRRR (10 m winds, PBL height <code>HPBL</code> <span class="v">VERIFIED</span>); local weather stations</td><td>Transport (Stage 3)</td></tr>
 <tr><td>Moisture / surface state</td><td>Precipitation and humidity (HRRR, stations); satellite imagery</td><td>&phi;<sub>i</sub>(t) (Stage 2)</td></tr>
 <tr><td>Lake level by arm</td><td>USGS 10010000, 10010100 (daily &rarr; held constant within each day)</td><td>X<sub>i</sub>(t)</td></tr>
 </table>
+
+<div class="box gap"><span class="label">Build finding: HRRR's surface classes don't follow the shoreline</span>
+HRRR uses a fixed land/water mask over the lake. In 2022 it treats the south arm as water (roughness 0) and Farmington Bay, Bear River
+Bay and much of the north arm as vegetated land (roughness 5&ndash;7 cm) <span class="v">VERIFIED</span>. A drying playa is far smoother
+(about 0.01&ndash;0.1 cm), so HRRR's friction velocity would be too low over "water" and up to about 2&times; too high over "land". Since
+emission depends on u* exceeding a threshold, u* over exposed lakebed is computed from HRRR 10 m winds with a playa roughness length,
+carried as an uncertainty range. HRRR winds are also rotated from grid-relative to true north before any direction is used.</div>
 
 <div class="box guide"><span class="label">Guide assumptions tested in Stage 1</span>
 <b>Match elevation units and vertical datums</b> (conversion + unit test) &middot; <b>use lake levels by arm</b> (two gauges, basin
@@ -227,21 +234,28 @@ c<sub>As</sub>; measured or bounded &eta;.</p>
 10<sup>&minus;6</sup> kg/kg) for 17 dust and 14 sediment samples.</td><td>Directly usable c<sub>As</sub> observations; ppm converts to
 the guide's kg/kg.</td></tr>
 <tr><td>Only three sediment samples are at playa/lakeshore sites ("Playa west of OBW bundt site" 13.7 ppm, "The Boneyard" playa
-13.2 ppm, "Promontory Road" 15.1 ppm). The other eleven are urban, farm and construction sites (0.9&ndash;3.3 ppm).</td><td>Three
-lakebed points cannot support a meaningful GP/kriging surface over the lakebed. The non-lake samples are still useful as contrasting
-source signatures.</td></tr>
+13.2 ppm, "Promontory Road" 15.1 ppm). The other eleven are urban, farm and construction sites (0.9&ndash;3.3 ppm).</td><td>On its
+own, three lakebed points can't support a meaningful GP/kriging surface (the second release below resolves this). The non-lake samples
+are still useful as contrasting source signatures.</td></tr>
 <tr><td>All samples are the &lt;63 &micro;m size fraction.</td><td>Not PM10-size-matched, so &eta; can't be measured from this release; it
 must be bounded until size-matched samples exist.</td></tr>
+<tr><td><b>Build finding:</b> a second USGS release ("Dust and sediment data from Great Salt Lake and the Wasatch Front, 2018-19")
+adds 48 sediment samples <span class="v">VERIFIED</span>. Together the releases give about 16 playa/lakebed sites at 13&ndash;27 ppm
+arsenic, versus 1&ndash;5 ppm at upland and urban sites, with several sites split by grain size.</td><td>Enough lakebed points to run
+the guide's GP/kriging, with kriging variance reported as the chemistry uncertainty. Grain-size splits give &lt;63 &micro;m /
+&ge;63 &micro;m arsenic ratios of 0.84&ndash;1.33, which set &eta;'s bounds (0.8&ndash;2.0).</td></tr>
 </table>
 <div class="box gap"><span class="label">Data-readiness gap (chemistry)</span>
-The guide's GP/kriging method is kept. What's missing is lakebed sample density. Before kriging, gather additional lakebed sediment
-chemistry (other USGS/state/university releases, or new sampling), then report kriging variance as the chemistry uncertainty.
+Lakebed sites cluster around Farmington Bay, Antelope Island, Lakeside and Saline, so kriging variance is large elsewhere (for example
+Bear River Bay and the north-arm interior). More lakebed samples there would shrink the chemistry uncertainty most.
 Size-dependent transport and enrichment use the guide's options: particle bins or uncertainty bounds (see <a href="#dec">Decisions</a>).</div>
 
 <div class="box gap"><span class="label">Data-readiness gap (field calibration)</span>
-No public PI-SWERL dataset for Great Salt Lake was located during this plan's source check. PI-SWERL results are the gating input for
-both the RF/XGBoost &phi; model and the threshold-law calibration, so locating published field campaigns (or requesting their data) is
-the first sourcing task of Stage 2.</div>
+Great Salt Lake PI-SWERL results exist: a University of Utah MS thesis (J. T. Powell, "A New Method for Assessing the Effects of Soil
+Moisture on Dust Emission from Playas&hellip;: PI-SWERL Evidence from Great Salt Lake Playa") is the source of the published finding
+that about 4% soil moisture shuts off emission. Its flux tables couldn't be retrieved automatically. Until they are, the threshold law
+runs on open PI-SWERL field fluxes from another playa (Lordsburg Playa, NM), flagged <i>interim</i> in the parameter registry, with
+wide ranges. Obtaining the GSL tables is the first sourcing task.</div>
 
 <div class="box exit"><span class="label">Stage 2 is done when</span>
 the threshold law is calibrated against field fluxes with parameter uncertainty; &phi; is evaluated on held-out field sites (or the
@@ -336,11 +350,11 @@ alternate transport runs</td></tr>
 <tr><td>USGS gauge 10010100 (near Saline)</td><td>Exposure X (north arm)</td><td><span class="v">VERIFIED</span> Daily, NGVD29 ft. Not linked in the guide, but needed for "lake levels by arm"</td></tr>
 <tr><td>USGS topobathymetric model and area tables</td><td>Exposure X</td><td><span class="v">VERIFIED</span> NAVD88 m; 34 GB + 9.8 GB overviews, tokenized access; per-basin tables</td></tr>
 <tr><td>Utah lidar (UGRC)</td><td>Exposure X</td><td>2016 GSL lidar is already merged into the topobathymetric model</td></tr>
-<tr><td>PI-SWERL field tests</td><td>&phi;, threshold law</td><td><b>Not yet located</b> &mdash; gating item for Stage 2</td></tr>
-<tr><td>USGS dust and sediment chemistry, 2022</td><td>c<sub>As</sub>, &eta;</td><td><span class="v">VERIFIED</span> Downloadable; 3 lakebed sediment points; &lt;63 &micro;m only</td></tr>
+<tr><td>PI-SWERL field tests</td><td>&phi;, threshold law</td><td><b>Located, not retrieved</b> &mdash; Powell (Univ. of Utah MS thesis); interim non-GSL values in use</td></tr>
+<tr><td>USGS dust and sediment chemistry, 2022 and 2018-19</td><td>c<sub>As</sub>, &eta;</td><td><span class="v">VERIFIED</span> Downloadable; about 16 lakebed sites combined; no PM10-size fraction</td></tr>
 <tr><td>Particle-size-matched samples</td><td>&eta;</td><td><b>Not yet located</b> &mdash; &eta; bounded until found</td></tr>
 <tr><td>NOAA HRRR (HYSPLIT-ready archive)</td><td>u*, transport</td><td><span class="v">VERIFIED</span> Public AWS, June 2015 onward; ~14 GB/day</td></tr>
-<tr><td>HYSPLIT (NOAA READY)</td><td>Transport</td><td><span class="v">VERIFIED</span> Public</td></tr>
+<tr><td>HYSPLIT (NOAA READY)</td><td>Transport</td><td><span class="v">VERIFIED</span> Free; the Mac trial build requires accepting NOAA's usage agreement with an email address</td></tr>
 <tr><td>EPA AQS / Utah DAQ PM10</td><td>Validation</td><td>Public (EPA bulk hourly files; Utah DAQ portal)</td></tr>
 <tr><td>Independent plume evidence; filter chemistry</td><td>Validation</td><td><b>To be sourced</b></td></tr>
 </table>
