@@ -58,7 +58,7 @@ def list_overview_pages():
         n += 1
 
 
-def load_terrain(max_page_res_m: float = 10.0) -> np.ndarray:
+def load_terrain(max_page_res_m: float = 17.0) -> np.ndarray:
     """Terrain (NAVD88 m) resampled by averaging onto the lattice at
     ANALYSIS_RES_M, read from the finest overview page no finer than needed."""
     cache = DATA_INTERIM / f"terrain_{int(ANALYSIS_RES_M)}m.npy"
@@ -76,7 +76,7 @@ def load_terrain(max_page_res_m: float = 10.0) -> np.ndarray:
         src = ds.read(1).astype(np.float32)
     if nodata is not None:
         src[src == nodata] = np.nan
-    src[src < -1e30] = np.nan
+    src[(src == 0) | (src < -1e30)] = np.nan  # the .ovr pages declare nodata = 0
     reproject(src, dst, src_transform=src_transform, src_crs=CRS, src_nodata=np.nan,
               dst_transform=dst_transform, dst_crs=CRS, dst_nodata=np.nan,
               resampling=Resampling.average)

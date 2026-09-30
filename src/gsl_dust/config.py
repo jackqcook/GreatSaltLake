@@ -12,8 +12,10 @@ TABLES = ROOT / "results" / "tables"
 TBDEM_DIR = DATA_RAW / "tbdem"
 TBDEM_OVR = TBDEM_DIR / "Great_Salt_Lake_TBDEM.tif.ovr"
 TBDEM_TFW = TBDEM_DIR / "Great_Salt_Lake_TBDEM.tfw"
-TBDEM_WIDTH = 248_919  # full-resolution columns (USGS metadata)
-TBDEM_HEIGHT = 202_228  # full-resolution rows
+# Full-resolution size. The USGS metadata lists rowcount 202,228 / colcount
+# 248,919, but the overview pages show the image is 202,228 wide x 248,919 tall.
+TBDEM_WIDTH = 202_228
+TBDEM_HEIGHT = 248_919
 TBDEM_RES_M = 0.5
 
 # NAD83 / UTM zone 12N: the terrain's horizontal reference.
