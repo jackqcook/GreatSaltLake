@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: Letter; margin: 1.9cm 1.9cm 2.1cm 1.9cm; }
+  body { font-family: Georgia, 'Times New Roman', serif; font-size: 11px; line-height: 1.5; color: #232323; }
+  h1, h2, h3, h4 { font-family: 'Helvetica Neue', Arial, sans-serif; color: #16324a; }
+  h2 { font-size: 16px; border-bottom: 2px solid #16324a; padding-bottom: 4px; margin-top: 26px; }
+  h3 { font-size: 12.5px; color: #b5651d; margin: 16px 0 5px; }
+  h2, h3, h4 { page-break-after: avoid; }
+  .box { page-break-inside: avoid; }
+  h4 { font-size: 11px; margin: 10px 0 3px; color: #16324a; }
+  .num { color: #b5651d; }
+  .cover { height: 21cm; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+  .kicker { font-family: 'Helvetica Neue', Arial, sans-serif; text-transform: uppercase; letter-spacing: 2px; font-size: 10.5px; color: #b5651d; margin-bottom: 12px; }
+  .cover h1 { font-size: 32px; line-height: 1.22; margin: 0 0 12px; }
+  .cover .sub { font-size: 14px; color: #555; font-style: italic; max-width: 14cm; margin-bottom: 34px; }
+  .cover .meta { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: #888; line-height: 1.7; }
+  .box { background: #f4f0e8; border-left: 4px solid #b5651d; padding: 9px 13px; margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 10.6px; }
+  .box .label { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: bold; color: #b5651d; text-transform: uppercase; font-size: 8.8px; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+  .guide { background: #eef2f6; border-left-color: #16324a; }
+  .guide .label { color: #16324a; }
+  .gap { background: #f7eeee; border-left-color: #a33d3d; }
+  .gap .label { color: #a33d3d; }
+  .exit { background: #eef4ed; border-left-color: #2f6b3a; }
+  .exit .label { color: #2f6b3a; }
+  table { border-collapse: collapse; width: 100%; margin: 9px 0; font-size: 9.8px; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid #cfcfcf; padding: 4px 7px; text-align: left; vertical-align: top; }
+  th { background: #16324a; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: normal; font-size: 8.8px; text-transform: uppercase; letter-spacing: 0.4px; }
+  tr:nth-child(even) td { background: #f7f7f7; }
+  figure { margin: 12px 0; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 9px; color: #777; font-style: italic; margin-top: 3px; }
+  code { background: #eee; padding: 0 3px; border-radius: 2px; font-size: 9.6px; }
+  ul, ol { margin-top: 3px; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  .pb { page-break-before: always; }
+  .v { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 8px; background: #2f6b3a; color: #fff; padding: 1px 4px; border-radius: 2px; vertical-align: 1px; }
+  .small { font-size: 9px; color: #777; }
+  .toc { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11.5px; line-height: 1.95; }
+  .toc a { color: #16324a; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="kicker">Great Salt Lake dust model</div>
+  <h1>Implementation Plan:<br>The Stages That Bring the<br>Model to Life</h1>
+  <div class="sub">A stage-by-stage plan built entirely on <b>GSL_Dust_Model_Guide.pdf</b>, the project's modeling
+  standard. Every stage follows the guide's build order, every method follows the guide's component table, and every
+  assumption the guide asks us to test is assigned to a stage where it gets tested.</div>
+  <div class="meta">Prepared 30 September 2026 &middot; Items marked <span class="v">VERIFIED</span> were checked against the live
+  source on that date<br>Supersedes the earlier "V2 Implementation Plan" &middot; Standard: docs/GSL_Dust_Model_Guide.pdf</div>
+</div>
+
+<h2>Contents</h2>
+<div class="toc">
+<ol>
+  <li><a href="#s0">How this plan relates to the guide</a></li>
+  <li><a href="#s1">The standard, restated</a></li>
+  <li><a href="#st1">Stage 1 &mdash; 1 km grid and hourly inputs</a></li>
+  <li><a href="#st2">Stage 2 &mdash; Field-calibrated emissions</a></li>
+  <li><a href="#st3">Stage 3 &mdash; Dispersion</a></li>
+  <li><a href="#st4">Stage 4 &mdash; Held-out event and chemistry validation</a></li>
+  <li><a href="#st5">Stage 5 &mdash; Lake-level scenarios under identical weather</a></li>
+  <li><a href="#unc">Uncertainty reporting (all stages)</a></li>
+  <li><a href="#ready">Data readiness</a></li>
+  <li><a href="#dec">Decisions needed before building</a></li>
+  <li><a href="#appA">Appendix A &mdash; Guide requirement traceability</a></li>
+  <li><a href="#appB">Appendix B &mdash; What changed from the earlier V2 plan</a></li>
+</ol>
+</div>
+
+<h2 id="s0"><span class="num">1.</span> How this plan relates to the guide</h2>
+<p>The guide is the specification: it fixes <i>what</i> the model is (the equations, the compartments, the outputs and
+where the model stops), <i>which method</i> each component uses, <i>which assumptions</i> must be tested, and <i>the order</i>
+the work happens in. This plan adds only the <i>how</i>: where each input lives, what it takes to get it into the model,
+what "done" looks like at each stage, and where the available data falls short of what the guide's method needs.</p>
+<p>Three rules follow from that:</p>
+<ol>
+  <li><b>The five stages are the guide's build order</b>, in the guide's sequence, with no stages added or merged.</li>
+  <li><b>Methods are the guide's methods.</b> Where the data can't yet support a guide method, the plan reports a
+  <b>data-readiness gap</b> against that method; it does not quietly swap in a different method. The only alternatives
+  used are the ones the guide itself names ("otherwise physics" for &phi;; "measured or bounded" for &eta;;
+  "particle bins or uncertainty bounds" for size effects).</li>
+  <li><b>Fidelity is checkable.</b> Appendix A maps every requirement in the guide to the section that satisfies it.</li>
+</ol>
+
+<h2 id="s1"><span class="num">2.</span> The standard, restated</h2>
+<div class="box guide"><span class="label">Goal and scope (guide)</span>
+Predict PM10 dust and its arsenic moving from Great Salt Lake sediment into the Salt Lake Valley. Outputs are
+<b>arrival mass</b> and <b>arrival rate</b>; the model <b>stops before health effects</b>.</div>
+
+<figure><img src="/Users/jackcook/Desktop/GSL Model/docs/plan_assets/build_order.png" style="width:100%">
+<figcaption>The guide's build order. Each box is one stage of this plan.</figcaption></figure>
+
+<figure><img src="/Users/jackcook/Desktop/GSL Model/docs/plan_assets/equations.png" style="width:78%">
+<figcaption>The governing equations, exactly as specified in the guide.</figcaption></figure>
+
+<table>
+<tr><th style="width:17%">Symbol</th><th style="width:48%">Meaning (guide)</th><th>Units / range</th></tr>
+<tr><td><code>S_i</code></td><td>PM10-emittable sediment in lakebed cell i</td><td>kg</td></tr>
+<tr><td><code>I_i</code></td><td>Airborne dust from cell i</td><td>kg</td></tr>
+<tr><td><code>R</code>, <code>R_As</code></td><td>Cumulative dust (and arsenic) entering the valley</td><td>kg; rates dR/dt, dR<sub>As</sub>/dt in kg per time</td></tr>
+<tr><td><code>X_i(t)</code></td><td>Exposed fraction of the cell, from lake elevation and terrain</td><td>0&ndash;1</td></tr>
+<tr><td><code>&phi;_i(t)</code></td><td>Erodibility</td><td>0&ndash;1</td></tr>
+<tr><td><code>u*</code>, <code>u*t</code></td><td>Friction velocity and its erosion threshold</td><td>m/s</td></tr>
+<tr><td><code>p</code></td><td>Wind sensitivity</td><td>dimensionless</td></tr>
+<tr><td><code>K_i</code></td><td>Emission coefficient, calibrated so &beta; has inverse-time units</td><td>1 / (time &middot; (m/s)<sup>p</sup>)</td></tr>
+<tr><td><code>G_i</code></td><td>Sediment replenishment</td><td>kg per time</td></tr>
+<tr><td><code>k_V,i</code>, <code>k_L,i</code></td><td>Transfer into the valley; removal by deposition or transport elsewhere</td><td>1 / time</td></tr>
+<tr><td><code>c_As,i</code>, <code>&eta;_i</code></td><td>kg arsenic per kg sediment; enrichment in airborne particles</td><td>kg/kg; dimensionless</td></tr>
+</table>
+
+<figure><img src="/Users/jackcook/Desktop/GSL Model/docs/plan_assets/compartments.png" style="width:88%">
+<figcaption>Mass flows from sediment to airborne dust to valley arrival. The dashed region is the part the guide says to
+prototype with first-order transfer, then replace with HYSPLIT dispersion driven by HRRR.</figcaption></figure>
+
+
+<h2 id="st1"><span class="num">3.</span> Stage 1 &mdash; 1 km grid and hourly inputs</h2>
+<p>Builds the spatial frame (lakebed cells i), the exposure term X<sub>i</sub>(t), and every hourly forcing the later
+stages need. Guide method for exposure: <b>geometry; no ML</b>.</p>
+
+<h3>1.1 Build the 1 km lakebed grid</h3>
+<ul>
+  <li>Cells i cover the lakebed, since the ODE is written "for each lakebed cell i". Use a projected equal-distance grid
+  (UTM zone 12N, NAD83, matching the terrain data's horizontal datum) so every cell is exactly 1 km &times; 1 km.</li>
+  <li>Tag each cell with its arm/bay (north arm, south arm, Farmington Bay, Bear River Bay), because lake level is applied
+  by arm.</li>
+  <li>The Salt Lake Valley boundary is needed as a receptor (it defines "entering the valley" for R and for the first-entry
+  rule in Stage 3). The guide does not draw it, so it's listed under <a href="#dec">Decisions</a>.</li>
+</ul>
+
+<h3>1.2 Exposure X<sub>i</sub>(t) &mdash; geometry, no ML</h3>
+<p><b>Inputs (guide):</b> USGS Saltair lake gauge; USGS terrain / Utah lidar.</p>
+<ul>
+  <li><b>Lake level by arm.</b> Saltair (USGS 10010000) for the south arm and Great Salt Lake near Saline (USGS 10010100)
+  for the north arm, both daily <span class="v">VERIFIED</span>.</li>
+  <li><b>Terrain.</b> The USGS half-meter topobathymetric elevation model (bathymetry 2002&ndash;2006 merged with 2016 Utah
+  lidar) <span class="v">VERIFIED</span>. Horizontal NAD83, vertical <b>NAVD88, meters</b>.</li>
+  <li><b>Method.</b> For each cell, X<sub>i</sub>(t) = fraction of the cell's area whose lakebed elevation is above that arm's
+  water level at time t. Computed from the terrain pixels inside the cell, so exposure isn't reduced to one average elevation
+  per cell.</li>
+</ul>
+
+<div class="box gap"><span class="label">Guide assumption: match elevation units and vertical datums</span>
+This is a live issue, not a formality. The gauges report parameter 62614, which is <b>NGVD 1929, feet</b>
+<span class="v">VERIFIED</span>; the terrain is <b>NAVD 1988, meters</b>. USGS's own conversion at the Saltair gauge (NOAA
+VERTCON) is <b>NAVD88 = NGVD29 + 3.47586 ft</b> <span class="v">VERIFIED</span>. Stage 1 converts every gauge reading to NAVD88
+meters before it touches the terrain, with a unit test on the conversion. (The earlier v1 code labelled these same gauge
+readings as NAVD88, which is exactly the error this assumption exists to catch.)</div>
+
+<h4>Terrain access (implementation detail)</h4>
+<p>The terrain is a single 34.0 GB GeoTIFF plus a 9.8 GB overview file on ScienceBase, stored behind tokenized S3 download
+links (the ScienceBase API / <code>sciencebasepy</code> issues them) <span class="v">VERIFIED</span>. A 1 km cell doesn't need
+half-meter pixels: USGS itself resampled to 5 m to build its area tables. Plan: read a coarse overview level (about 5&ndash;25 m)
+rather than the full-resolution file, and record the resolution used, since the guide asks for a grid-resolution test.</p>
+
+<h4>Built-in validation target</h4>
+<p>USGS publishes elevation-area tables for the total lake and each of the four basins at 0.01 ft steps from 4,170 to 4,215 ft
+NAVD88, computed from this same terrain <span class="v">VERIFIED</span>. Summing the wet area of each basin's cells at each level
+must reproduce those tables. That's a direct check on the grid, the basin tags, and the datum handling together.</p>
+
+<h3>1.3 Hourly inputs</h3>
+<table>
+<tr><th style="width:24%">Input</th><th style="width:36%">Source</th><th>Used by</th></tr>
+<tr><td>Friction velocity u*<sub>i</sub>(t)</td><td>NOAA HRRR surface field <code>FRICV</code> <span class="v">VERIFIED</span>, checked against local weather stations</td><td>&beta;<sub>i</sub>(t) threshold law (Stage 2)</td></tr>
+<tr><td>Winds and mixing</td><td>NOAA HRRR (10 m winds, PBL height <code>HPBL</code> <span class="v">VERIFIED</span>); local weather stations</td><td>Transport (Stage 3)</td></tr>
+<tr><td>Moisture / surface state</td><td>Precipitation and humidity (HRRR, stations); satellite imagery</td><td>&phi;<sub>i</sub>(t) (Stage 2)</td></tr>
+<tr><td>Lake level by arm</td><td>USGS 10010000, 10010100 (daily &rarr; held constant within each day)</td><td>X<sub>i</sub>(t)</td></tr>
+</table>
+
+<div class="box guide"><span class="label">Guide assumptions tested in Stage 1</span>
+<b>Match elevation units and vertical datums</b> (conversion + unit test) &middot; <b>use lake levels by arm</b> (two gauges, basin
+tags) &middot; <b>test grid resolution</b> (recompute X at 1 km and at a finer and a coarser grid, and report how much total exposed
+area and its spatial pattern change) &middot; <b>cells use average properties</b> (X is computed from sub-cell terrain; the
+cell-average assumption is carried into &phi; in Stage 2).</div>
+
+<div class="box exit"><span class="label">Stage 1 is done when</span>
+the grid and basin tags exist; per-basin wet area reproduces the USGS elevation-area tables (target within 1&ndash;2%, since both
+come from the same terrain); datum conversion is unit-tested; the grid-resolution comparison is recorded; and hourly
+X<sub>i</sub>(t), u*<sub>i</sub>(t) and moisture inputs are complete for the chosen simulation period.</div>
+
+<h2 id="st2"><span class="num">4.</span> Stage 2 &mdash; Field-calibrated emissions</h2>
+<p>Turns exposure and wind into emission &beta;<sub>i</sub>(t) and tracks the sediment reservoir S<sub>i</sub>. The guide groups
+<b>emission and chemistry</b> together, so the arsenic fields c<sub>As,i</sub> and &eta;<sub>i</sub> are also built here, ready
+for Stage 3.</p>
+
+<h3>2.1 Erodibility &phi;<sub>i</sub>(t)</h3>
+<p><b>Inputs (guide):</b> PI-SWERL field tests; moisture, crust, texture, satellite imagery. <b>Method (guide):</b> RF/XGBoost for
+&phi; with field labels; otherwise physics.</p>
+<ul>
+  <li>With field labels: PI-SWERL measurements become training labels; moisture, crust, texture and satellite features are the
+  predictors; evaluation holds out whole field sites, not random samples.</li>
+  <li>Without them: physics-based &phi; from the same moisture/crust/texture inputs (the guide's "otherwise physics").</li>
+  <li>&phi; must be able to reach 0: the guide notes exposed ground may be crusted and non-erodible.</li>
+</ul>
+
+<h3>2.2 Threshold law: K<sub>i</sub>, u*<sub>t,i</sub>, p</h3>
+<ul>
+  <li>The guide calls the law approximate and says to <b>calibrate it against field fluxes</b>. PI-SWERL measures emission flux at
+  controlled friction velocities, which is exactly the data that pins down u*<sub>t</sub>, p and K.</li>
+  <li>Calibrate K so &beta; comes out in inverse-time units (guide).</li>
+  <li>K, p and u*<sub>t</sub> are calibrated against field fluxes, not tuned to PM10 monitors. That keeps emission independent of the
+  Stage 4 validation data.</li>
+</ul>
+
+<h3>2.3 Sediment reservoir: S<sub>i</sub>(0) and G<sub>i</sub></h3>
+<ul>
+  <li>The guide states initial S and replenishment G <b>need independent estimates</b>. Candidate independent evidence: supply-limited
+  (depleting) behavior in repeated field flux tests, and surface-sediment surveys. Carry both as ranges into the uncertainty
+  budget.</li>
+  <li>Integration detail: with coefficients held constant within each hour, dS/dt = G &minus; &beta;S has an exact exponential
+  solution per step, which stays stable when &beta; is large.</li>
+</ul>
+
+<h3>2.4 Arsenic: c<sub>As,i</sub> and &eta;<sub>i</sub></h3>
+<p><b>Inputs (guide):</b> USGS sediment and dust chemistry; particle-size-matched samples. <b>Method (guide):</b> GP/kriging for
+c<sub>As</sub>; measured or bounded &eta;.</p>
+<p>The dataset the guide links (USGS, "Dust and sediment data from Great Salt Lake and northern Utah, 2022") was checked
+<span class="v">VERIFIED</span>:</p>
+<table>
+<tr><th style="width:34%">What it contains</th><th>Implication for the guide's method</th></tr>
+<tr><td>71 samples: 34 passive dust-trap (150 cm), 14 surface sediment, 17 water, 2 standards. Arsenic in ppm (= mg/kg, so
+10<sup>&minus;6</sup> kg/kg) for 17 dust and 14 sediment samples.</td><td>Directly usable c<sub>As</sub> observations; ppm converts to
+the guide's kg/kg.</td></tr>
+<tr><td>Only three sediment samples are at playa/lakeshore sites ("Playa west of OBW bundt site" 13.7 ppm, "The Boneyard" playa
+13.2 ppm, "Promontory Road" 15.1 ppm). The other eleven are urban, farm and construction sites (0.9&ndash;3.3 ppm).</td><td>Three
+lakebed points cannot support a meaningful GP/kriging surface over the lakebed. The non-lake samples are still useful as contrasting
+source signatures.</td></tr>
+<tr><td>All samples are the &lt;63 &micro;m size fraction.</td><td>Not PM10-size-matched, so &eta; can't be measured from this release; it
+must be bounded until size-matched samples exist.</td></tr>
+</table>
+<div class="box gap"><span class="label">Data-readiness gap (chemistry)</span>
+The guide's GP/kriging method is kept. What's missing is lakebed sample density. Before kriging, gather additional lakebed sediment
+chemistry (other USGS/state/university releases, or new sampling), then report kriging variance as the chemistry uncertainty.
+Size-dependent transport and enrichment use the guide's options: particle bins or uncertainty bounds (see <a href="#dec">Decisions</a>).</div>
+
+<div class="box gap"><span class="label">Data-readiness gap (field calibration)</span>
+No public PI-SWERL dataset for Great Salt Lake was located during this plan's source check. PI-SWERL results are the gating input for
+both the RF/XGBoost &phi; model and the threshold-law calibration, so locating published field campaigns (or requesting their data) is
+the first sourcing task of Stage 2.</div>
+
+<div class="box exit"><span class="label">Stage 2 is done when</span>
+the threshold law is calibrated against field fluxes with parameter uncertainty; &phi; is evaluated on held-out field sites (or the
+physics &phi; is documented); S<sub>i</sub>(0) and G<sub>i</sub> have independent estimates with ranges; and c<sub>As,i</sub> (kriged,
+with variance) and &eta; (measured or bounded) exist for every lakebed cell.</div>
+
+<h2 id="st3"><span class="num">5.</span> Stage 3 &mdash; Dispersion</h2>
+<p>Moves emitted dust from the lakebed to the valley. The guide specifies two steps: <b>prototype with the ODE</b>, then <b>replace
+its airborne transfer equations with HYSPLIT dispersion driven by HRRR</b>, using emissions &beta;S. Guide method: HYSPLIT; no ML.</p>
+
+<h3>3.1 ODE prototype (first-order transfer)</h3>
+<ul>
+  <li>Implement dI/dt, dR/dt and dR<sub>As</sub>/dt with per-cell k<sub>V,i</sub> and k<sub>L,i</sub>, under the guide's stated assumption
+  of well-mixed compartments and first-order transfer.</li>
+  <li>Purpose: prove the kg bookkeeping end to end. Checks: mass closes to numerical precision (sediment lost = airborne gained +
+  valley arrival + removed); R never decreases; first valley entry is counted once (in the ODE, dust moved into R leaves I, so this
+  holds by construction).</li>
+  <li>The prototype's k<sub>V</sub>, k<sub>L</sub> need a documented physical basis (for example cell-to-valley distance and how often
+  HRRR winds blow toward the valley). They aren't tuned to PM10: R is cumulative arrival, not concentration.</li>
+</ul>
+
+<h3>3.2 Replace transfer with HYSPLIT driven by HRRR</h3>
+<ul>
+  <li>Source term: &beta;<sub>i</sub>S<sub>i</sub> per cell per hour. HYSPLIT then handles transport and deposition in place of
+  k<sub>V</sub> and k<sub>L</sub>, and provides concentrations for monitor comparisons (guide).</li>
+  <li>HYSPLIT is public from NOAA READY; HRRR 3 km is available pre-formatted for HYSPLIT on a public AWS bucket, June 2015 onward
+  <span class="v">VERIFIED</span>.</li>
+  <li><b>Count first valley entry once.</b> With particle output, flag each particle's first crossing into the valley boundary and add
+  its mass to R (and R<sub>As</sub>) only then, so dust that leaves and re-enters isn't double counted.</li>
+  <li>Run HYSPLIT and the ODE prototype over the same period and compare where their arrivals differ; the differences show what
+  first-order transfer was missing.</li>
+</ul>
+<div class="box gap"><span class="label">Engineering constraint: HRRR data volume</span>
+The HYSPLIT-ready HRRR files cover the whole continental US at about 3.4 GB per 6-hour file, roughly 14 GB per simulated day
+<span class="v">VERIFIED</span>, and a spatial subset can't be pulled from them remotely. Two workable paths, still "HYSPLIT driven by
+HRRR": (a) run event windows from that archive, or (b) build a regional Utah file from the original HRRR output, which can be
+downloaded variable by variable and cropped, then converted with HYSPLIT's own conversion tools. Choose based on how many simulated
+days Stages 4&ndash;5 need.</div>
+
+<div class="box guide"><span class="label">Guide assumptions tested in Stage 3</span>
+Well-mixed compartments and first-order transfer (tested by comparing the ODE prototype against HYSPLIT) &middot; count first valley
+entry once &middot; R is cumulative arrival, not airborne concentration.</div>
+
+<div class="box exit"><span class="label">Stage 3 is done when</span>
+the ODE prototype closes its mass balance; HYSPLIT runs from the hourly &beta;S source; the first-entry rule is implemented and tested on
+a case with re-entering particles; and hourly concentrations exist at every validation monitor, along with R(t) and R<sub>As</sub>(t).</div>
+
+<h2 id="st4"><span class="num">6.</span> Stage 4 &mdash; Held-out event and chemistry validation</h2>
+<p><b>Inputs (guide):</b> EPA AQS / Utah DAQ PM10; independent plume and filter chemistry evidence. <b>Method (guide):</b> held-out
+events and locations.</p>
+<ul>
+  <li><b>Hold out both.</b> Fix, before any comparison, a set of whole dust events and a set of whole monitor locations that are never
+  used for calibration. Score the model on held-out events at held-out locations as well as each separately.</li>
+  <li><b>Compare like with like.</b> PM10 monitors are compared with HYSPLIT concentrations at the monitor, never with R.</li>
+  <li><b>Attribution needs more than PM10.</b> The guide states PM10 alone cannot identify GSL dust. Each validated event needs
+  independent plume evidence that the dust came from the lakebed.</li>
+  <li><b>Arsenic needs chemistry.</b> PM10 cannot validate arsenic (guide). Modeled arsenic is checked against filter chemistry. The
+  USGS 2022 release's dust-trap arsenic (17 samples) is one independent line of evidence; it measures deposition over a collection
+  period, so the comparison is against modeled deposition over the same period, not against concentration.</li>
+</ul>
+<div class="box exit"><span class="label">Stage 4 is done when</span>
+held-out sets are fixed in advance; PM10 skill is reported for held-out events and locations; each validated event has independent
+plume evidence; and modeled arsenic is compared against independent chemistry with the chemistry uncertainty from Stage 2.</div>
+
+<h2 id="st5"><span class="num">7.</span> Stage 5 &mdash; Lake-level scenarios under identical weather</h2>
+<ul>
+  <li>Hold the hourly HRRR weather fixed and change only lake level (by arm). The change flows through X<sub>i</sub> &rarr;
+  &beta;<sub>i</sub> &rarr; emission &rarr; HYSPLIT &rarr; R and R<sub>As</sub>.</li>
+  <li>Report arrival mass (R, R<sub>As</sub>) and arrival rate (dR/dt, dR<sub>As</sub>/dt) per scenario, each with its uncertainty
+  range.</li>
+  <li>Scenario outputs stop at arrival. No exposure or health-effect estimates, as the guide specifies.</li>
+  <li>Scenario lake levels are listed under <a href="#dec">Decisions</a>.</li>
+</ul>
+
+<h2 id="unc"><span class="num">8.</span> Uncertainty reporting (all stages)</h2>
+<p>The guide asks for uncertainty ranges for <b>emission, chemistry and transport</b>, reported separately so it's clear which one
+dominates.</p>
+<table>
+<tr><th style="width:16%">Component</th><th style="width:44%">Sources of uncertainty</th><th>How it's carried forward</th></tr>
+<tr><td>Emission</td><td>&phi; model error on held-out field sites; threshold-law parameters (K, u*<sub>t</sub>, p); ranges on
+S<sub>i</sub>(0) and G<sub>i</sub>; grid-resolution sensitivity</td><td>Ensemble of emission runs sampling these ranges</td></tr>
+<tr><td>Chemistry</td><td>Kriging variance of c<sub>As</sub>; bounds on &eta;; particle-size treatment</td><td>Sampled alongside
+emission for R<sub>As</sub></td></tr>
+<tr><td>Transport</td><td>HYSPLIT configuration and HRRR error; the ODE-versus-HYSPLIT structural difference</td><td>Perturbed or
+alternate transport runs</td></tr>
+</table>
+
+<h2 id="ready"><span class="num">9.</span> Data readiness</h2>
+<table>
+<tr><th style="width:28%">Source (as linked in the guide)</th><th style="width:22%">Role</th><th>Status</th></tr>
+<tr><td>USGS Saltair gauge 10010000</td><td>Exposure X (south arm)</td><td><span class="v">VERIFIED</span> Daily, NGVD29 ft</td></tr>
+<tr><td>USGS gauge 10010100 (near Saline)</td><td>Exposure X (north arm)</td><td><span class="v">VERIFIED</span> Daily, NGVD29 ft. Not linked in the guide, but needed for "lake levels by arm"</td></tr>
+<tr><td>USGS topobathymetric model and area tables</td><td>Exposure X</td><td><span class="v">VERIFIED</span> NAVD88 m; 34 GB + 9.8 GB overviews, tokenized access; per-basin tables</td></tr>
+<tr><td>Utah lidar (UGRC)</td><td>Exposure X</td><td>2016 GSL lidar is already merged into the topobathymetric model</td></tr>
+<tr><td>PI-SWERL field tests</td><td>&phi;, threshold law</td><td><b>Not yet located</b> &mdash; gating item for Stage 2</td></tr>
+<tr><td>USGS dust and sediment chemistry, 2022</td><td>c<sub>As</sub>, &eta;</td><td><span class="v">VERIFIED</span> Downloadable; 3 lakebed sediment points; &lt;63 &micro;m only</td></tr>
+<tr><td>Particle-size-matched samples</td><td>&eta;</td><td><b>Not yet located</b> &mdash; &eta; bounded until found</td></tr>
+<tr><td>NOAA HRRR (HYSPLIT-ready archive)</td><td>u*, transport</td><td><span class="v">VERIFIED</span> Public AWS, June 2015 onward; ~14 GB/day</td></tr>
+<tr><td>HYSPLIT (NOAA READY)</td><td>Transport</td><td><span class="v">VERIFIED</span> Public</td></tr>
+<tr><td>EPA AQS / Utah DAQ PM10</td><td>Validation</td><td>Public (EPA bulk hourly files; Utah DAQ portal)</td></tr>
+<tr><td>Independent plume evidence; filter chemistry</td><td>Validation</td><td><b>To be sourced</b></td></tr>
+</table>
+
+<h2 id="dec"><span class="num">10.</span> Decisions needed before building</h2>
+<p>The guide leaves these open. Each needs a choice (yours) before the stage that uses it:</p>
+<ol>
+  <li><b>Salt Lake Valley boundary</b> (Stage 1, used in Stage 3). Defines "entering the valley" for R and the first-entry rule.</li>
+  <li><b>Lake-level source for Farmington Bay and Bear River Bay</b> (Stage 1). The two USGS gauges cover the north and south arms;
+  these bays are partly separated by causeways and dikes.</li>
+  <li><b>Particle bins or uncertainty bounds</b> for size-dependent transport and enrichment (Stage 2&ndash;3). The guide allows either.</li>
+  <li><b>Sourcing path for field data</b> (Stage 2): published PI-SWERL campaigns, data requests, or new fieldwork; same for more
+  lakebed chemistry.</li>
+  <li><b>Simulation period and HRRR strategy</b> (Stage 3): event windows from the HYSPLIT-ready archive, or a regional file built
+  from raw HRRR.</li>
+  <li><b>Scenario lake levels</b> (Stage 5).</li>
+</ol>
+
+<div class="pb"></div>
+<h2 id="appA">Appendix A &mdash; Guide requirement traceability</h2>
+<table>
+<tr><th style="width:62%">Requirement in the guide</th><th>Where this plan meets it</th></tr>
+<tr><td>Predict PM10 dust and its arsenic moving from GSL sediment into the Salt Lake Valley</td><td>Stages 1&ndash;5</td></tr>
+<tr><td>Outputs are arrival mass and arrival rate</td><td>3.1, 3.2, Stage 5</td></tr>
+<tr><td>The model stops before health effects</td><td>Stage 5</td></tr>
+<tr><td>S, I, R are masses in kg per lakebed cell i</td><td>&sect;2 symbol table; 3.1</td></tr>
+<tr><td>X is the exposed fraction, from lake elevation and terrain</td><td>1.2</td></tr>
+<tr><td>&phi; erodibility (0&ndash;1)</td><td>2.1</td></tr>
+<tr><td>u* friction velocity, u*t erosion threshold</td><td>1.3, 2.2</td></tr>
+<tr><td>G replenishes sediment</td><td>2.3</td></tr>
+<tr><td>kV transfers into the valley; kL removes by deposition or transport elsewhere</td><td>3.1</td></tr>
+<tr><td>&beta; and k have inverse-time units; calibrate K accordingly</td><td>2.2</td></tr>
+<tr><td>p controls wind sensitivity</td><td>2.2</td></tr>
+<tr><td>cAs kg/kg; &eta; enrichment in airborne particles</td><td>2.4</td></tr>
+<tr><td>Prototype with the ODE</td><td>3.1</td></tr>
+<tr><td>Replace airborne transfer with HYSPLIT driven by HRRR, using emissions &beta;S</td><td>3.2</td></tr>
+<tr><td>HYSPLIT handles transport and deposition and provides concentrations for monitor comparisons</td><td>3.2, Stage 4</td></tr>
+<tr><td>Exposure X: gauge + terrain/lidar; geometry, no ML</td><td>1.2</td></tr>
+<tr><td>Erodibility &phi;: PI-SWERL, moisture, crust, texture, imagery; RF/XGBoost with field labels, otherwise physics</td><td>2.1</td></tr>
+<tr><td>Arsenic: USGS chemistry, size-matched samples; GP/kriging for cAs; measured or bounded &eta;</td><td>2.4</td></tr>
+<tr><td>Transport: HRRR winds and mixing, local stations; HYSPLIT, no ML</td><td>1.3, 3.2</td></tr>
+<tr><td>Validation: AQS / Utah DAQ PM10, independent plume and filter chemistry; held-out events and locations</td><td>Stage 4</td></tr>
+<tr><td>Cells use average properties; exposed ground may be crusted and non-erodible</td><td>1.2, 2.1</td></tr>
+<tr><td>Match elevation units and vertical datums</td><td>1.2</td></tr>
+<tr><td>Use lake levels by arm</td><td>1.1, 1.2, Decision 2</td></tr>
+<tr><td>Test grid resolution</td><td>Stage 1 assumptions box; &sect;8</td></tr>
+<tr><td>Initial S and replenishment G need independent estimates</td><td>2.3</td></tr>
+<tr><td>Calibrate the approximate threshold law against field fluxes</td><td>2.2</td></tr>
+<tr><td>Arsenic rides on dust with a cell-specific composition</td><td>2.4 (c<sub>As,i</sub> per cell)</td></tr>
+<tr><td>Size-dependent transport and enrichment: particle bins or uncertainty bounds</td><td>2.4, Decision 3</td></tr>
+<tr><td>ODE assumes well-mixed compartments and first-order transfer</td><td>3.1, 3.2 comparison</td></tr>
+<tr><td>Count first valley entry once</td><td>3.1, 3.2</td></tr>
+<tr><td>R is cumulative arrival, not airborne concentration</td><td>3.1, Stage 4</td></tr>
+<tr><td>PM10 alone cannot identify GSL dust or validate arsenic</td><td>Stage 4</td></tr>
+<tr><td>Build order: grid &rarr; emissions &rarr; dispersion &rarr; validation &rarr; scenarios</td><td>Stages 1&ndash;5</td></tr>
+<tr><td>Report uncertainty ranges for emission, chemistry and transport</td><td>&sect;8</td></tr>
+</table>
+
+<h2 id="appB">Appendix B &mdash; What changed from the earlier V2 plan</h2>
+<ul>
+  <li><b>Structure:</b> nine self-defined phases replaced by the guide's five-stage build order.</li>
+  <li><b>Monitor comparison:</b> the earlier plan proposed converting R into a concentration with an assumed mixing volume. Removed: the
+  guide says R is not concentration, and monitor comparisons use HYSPLIT concentrations.</li>
+  <li><b>Arsenic:</b> the earlier plan led with literature placeholder values. Now the guide's GP/kriging method stands, with the lack of
+  lakebed samples reported as a data gap; &eta; is bounded only as the guide allows.</li>
+  <li><b>Erodibility:</b> physics &phi; is no longer presented as the default; it's the guide's fallback when field labels are
+  unavailable.</li>
+  <li><b>Design drivers:</b> the earlier plan was shaped around reusing v1 code. This plan is shaped only by the guide; code reuse is an
+  implementation convenience, not a design input.</li>
+  <li><b>New, verified facts added:</b> gauge datum (NGVD29), terrain datum (NAVD88 m), the official offset, north-arm gauge, terrain
+  file sizes and access, contents of the guide's chemistry dataset, HRRR friction velocity and data volume.</li>
+</ul>
+<p class="small">Sources are those linked in GSL_Dust_Model_Guide.pdf: USGS monitoring location 10010000; USGS half-meter topobathymetric
+elevation model and elevation-area-volume tables; UGRC SGID lidar; USGS dust and sediment data from Great Salt Lake and northern Utah,
+2022; NOAA ARL HYSPLIT meteorological archives; NOAA READY HYSPLIT; EPA AQS.</p>
+
+</body>
+</html>
