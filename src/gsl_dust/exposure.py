@@ -25,7 +25,7 @@ from rasterio.warp import reproject
 from scipy import ndimage
 
 from gsl_dust import decisions
-from gsl_dust.config import (CELL_M, CRS, DATA_INTERIM, DATA_RAW, GAUGE_LOCATIONS,
+from gsl_dust.config import (CELL_M, CRS, DATA_INTERIM, DATA_RAW, FT_TO_M, GAUGE_LOCATIONS,
                              GAUGE_NORTH_ARM, GAUGE_SOUTH_ARM, HYPSOMETRY_ITEM,
                              TBDEM_HEIGHT, TBDEM_OVR, TBDEM_TFW, TBDEM_WIDTH)
 from gsl_dust.datums import navd88_ft_to_m
@@ -77,6 +77,10 @@ def load_terrain(max_page_res_m: float = 17.0) -> np.ndarray:
     if nodata is not None:
         src[src == nodata] = np.nan
     src[(src == 0) | (src < -1e30)] = np.nan  # the .ovr pages declare nodata = 0
+    # The metadata says meters, but the values are NAVD88 feet (the minimum,
+    # 4170.09, matches the 4,170 ft floor of the USGS area tables). Convert once
+    # here so everything downstream is NAVD88 meters.
+    src *= FT_TO_M
     reproject(src, dst, src_transform=src_transform, src_crs=CRS, src_nodata=np.nan,
               dst_transform=dst_transform, dst_crs=CRS, dst_nodata=np.nan,
               resampling=Resampling.average)
