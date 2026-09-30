@@ -40,15 +40,24 @@ class Totals:
     arrived_as: np.ndarray  # kg arsenic per cell reaching the valley
 
 
+def _one_minus_phi1_over_t(x):
+    """1 - (1 - exp(-x)) / x, accurate for small x (-> x/2)."""
+    x = np.asarray(x, float)
+    small = x < 1e-4
+    safe = np.where(small, 1.0, x)
+    return np.where(small, x / 2 - x * x / 6, (safe + np.expm1(-safe)) / safe)
+
+
 def step(S, I, G, beta, kV, kL, dt=3600.0):
     """Advance one interval. All arrays per cell; G in kg/s, rates in 1/s.
-    Returns (S_new, I_new, emitted, to_valley, removed) in kg."""
+    Returns (S_new, I_new, emitted, to_valley, removed) in kg.
+
+    Written without G/beta or other differences of large numbers, so it stays
+    accurate when beta is tiny but nonzero (a cell barely above threshold)."""
     k = kV + kL
-    pos = beta > 0
-    b_safe = np.where(pos, beta, 1.0)
-    S_eq = np.where(pos, G / b_safe, 0.0)
-    S_new = np.where(pos, S_eq + (S - S_eq) * np.exp(-beta * dt), S + G * dt)
-    emitted = np.where(pos, G * dt - (S_new - S), 0.0)
+    x = beta * dt
+    S_new = S * np.exp(-x) + G * _phi1(beta, dt)
+    emitted = S * -np.expm1(-x) + G * dt * _one_minus_phi1_over_t(x)
     a = beta * S - G  # beta*S(t) = G + a exp(-beta t)
     I_new = I * np.exp(-k * dt) + G * _phi1(k, dt) + a * _dexp(beta, k, dt)
     left = emitted - (I_new - I)
