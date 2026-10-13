@@ -9,7 +9,7 @@ description = "Great Salt Lake dust and arsenic transport model, built to GSL_Du
 requires-python = ">=3.11"
 dependencies = [
   "numpy", "pandas", "scipy", "pyarrow", "requests", "matplotlib",
-  "rasterio", "pyproj", "shapely",
+  "rasterio", "pyproj", "shapely", "scikit-learn", "pdfplumber",
 ]
 
 [project.optional-dependencies]

@@ -42,7 +42,7 @@ def test_chain_conserves_mass_and_responds_to_wind_and_level(monkeypatch):
     monkeypatch.setattr(model, "_weather", _weather_factory(15.0, 0.0))      # strong, toward valley (east)
     toward = model.run(setup, _levels(start, end, 4192.0), p, start, end)
     pc = toward.per_cell
-    closes = pc["S_final"].sum() + pc["I_final"].sum() + pc["arrived"].sum() + pc["removed"].sum()
+    closes = pc["S_final"].sum() + pc["I_final"].sum() + pc["arrived_ode"].sum() + pc["removed_ode"].sum()
     assert np.isclose(closes, toward.diagnostics["supplied_kg"], rtol=1e-9)
     assert toward.R[-1] > 0 and np.all(np.diff(toward.R) >= 0)
     assert np.isclose(toward.R_As[-1], p["eta"] * 2e-5 * toward.R[-1])
