@@ -46,8 +46,12 @@ P = {
 
     # --- erodibility phi, physics branch (Stage 2.1) --------------------------
     "phi_surface": Param(0.09, 0.05, 0.20, "-",
-        "Fraction of exposed lakebed that emits (crust disturbed/absent). Univ. of Utah hotspot "
-        "mapping: ~9% (175 km2) of exposed lakebed emits."),
+        "Lakewide emitting fraction, used only when no per-cell survey field is supplied (first "
+        "prototype). Univ. of Utah hotspot mapping: ~9% (175 km2) of exposed lakebed emits."),
+    "phi_scale": Param(1.23, 1.0, 1.5, "-",
+        "Multiplier on the per-cell hot-spot fraction from Perry et al. (2019) Appendix C "
+        "(surface_survey.py). 1.0 = as parsed (6.9% of points); 1.23 = the report's own count "
+        "(8.5%, 446/5246); 1.5 allows crust loss between the 2016-18 survey and 2022."),
     "wet_depth_mm": Param(2.0, 1.0, 5.0, "mm",
         "Effective recent rain that holds the surface above the 4% soil-moisture shutoff found by "
         "PI-SWERL on GSL playa.", interim=True),
@@ -57,11 +61,12 @@ P = {
     "snow_m": Param(0.01, 0.005, 0.02, "m", "Snow depth above which the surface cannot emit."),
 
     # --- chemistry (Stage 2.4) -------------------------------------------------
-    "eta": Param(1.3, 0.8, 2.0, "-",
-        "Arsenic enrichment in airborne PM10 relative to <63 um sediment. Bounded, as the guide allows "
-        "(no PM10-size-matched samples exist). USGS 2018-19 sites with both fractions show <63 um / "
-        ">=63 um arsenic ratios of 0.84-1.33 (median 1.31); the upper bound allows further enrichment "
-        "below 63 um."),
+    "eta": Param(1.75, 1.0, 3.6, "-",
+        "Arsenic enrichment in airborne PM10 relative to lakebed sediment, MEASURED: Perry et al. "
+        "(2019) Appendix G PM10 arsenic (120 lakebed sites, resuspended <74 um soil through a PM10 "
+        "inlet; median 37 mg/kg) over USGS lakebed sediment arsenic. Central = median of 18 site "
+        "pairs within 5 km (1.75; 5-95% 1.28-2.65); range = 5-95% over all 120 sites against the "
+        "kriged sediment surface (1.0-3.6)."),
 
     # --- ODE prototype transfer (Stage 3.1) ------------------------------------
     "v_dep": Param(0.01, 0.003, 0.03, "m/s", "PM10 dry deposition velocity (typical range)."),

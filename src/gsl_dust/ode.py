@@ -74,21 +74,33 @@ def run(S0, G, beta_t, kV_t, kL_t, c_as, eta, dt=3600.0, record=None):
     return run_from(S0, np.zeros(S0.shape[0]), G, beta_t, kV_t, kL_t, c_as, eta, dt, record)
 
 
-def run_from(S0, I0, G, beta_t, kV_t, kL_t, c_as, eta, dt=3600.0, record=None):
-    """As run(), continuing from a given state (S0, I0)."""
+def run_from(S0, I0, G, beta_t, kV_t, kL_t, c_as, eta, dt=3600.0, record=None, zone_of_cell=None, n_zones=0):
+    """As run(), continuing from a given state (S0, I0). G may be per cell (n,)
+    or per hour and cell (T, n). With zone_of_cell, also returns the hourly mass
+    emitted (beta*S integrated over the hour) and its arsenic, summed by zone:
+    the source term handed to HYSPLIT (Stage 3.2)."""
     n = S0.shape[0]
     S, I = S0.astype(float).copy(), I0.astype(float).copy()
     tot = Totals(*(np.zeros(n) for _ in range(4)))
     T = beta_t.shape[0]
     r_rate, ras_rate = np.zeros(T), np.zeros(T)
+    G_t = np.broadcast_to(G, (T, n)) if np.ndim(G) == 1 else G
+    as_per_kg = c_as * eta
+    if zone_of_cell is not None:
+        e_zone, eas_zone = np.zeros((T, n_zones)), np.zeros((T, n_zones))
     for t in range(T):
-        S, I, em, tv, rm = step(S, I, G, beta_t[t], kV_t[t], kL_t[t], dt)
+        S, I, em, tv, rm = step(S, I, G_t[t], beta_t[t], kV_t[t], kL_t[t], dt)
         tot.emitted += em
         tot.arrived += tv
         tot.removed += rm
-        tot.arrived_as += c_as * eta * tv
+        tot.arrived_as += as_per_kg * tv
         r_rate[t] = tv.sum()
-        ras_rate[t] = (c_as * eta * tv).sum()
+        ras_rate[t] = (as_per_kg * tv).sum()
+        if zone_of_cell is not None:
+            e_zone[t] = np.bincount(zone_of_cell, em, n_zones)
+            eas_zone[t] = np.bincount(zone_of_cell, as_per_kg * em, n_zones)
         if record is not None:
             record.append((S.copy(), I.copy()))
+    if zone_of_cell is not None:
+        return S, I, tot, r_rate, ras_rate, e_zone, eas_zone
     return S, I, tot, r_rate, ras_rate

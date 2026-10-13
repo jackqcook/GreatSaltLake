@@ -36,3 +36,14 @@ SCENARIO_LEVELS_NGVD29_FT = {
 # Implementation definition of "lakebed": terrain at or below the top of the
 # USGS elevation-area tables, 4,215 ft NAVD88 (about the 1986-87 historic high).
 LAKEBED_TOP_FT_NAVD88 = 4215.0
+
+# Where sediment replenishment G accrues (implementation choice within the guide's
+# G_i; Stage 2.3). "exposed": only on exposed lakebed, scaled by X_i(t), so
+# submerged cells do not build up an emittable reservoir underwater (the first
+# prototype used "lakebed", the whole lakebed area). Provisional.
+REPLENISH_ON = "exposed"
+
+# Valley entry counts a particle's first position inside the valley receptor at
+# any height (Stage 3.2). In the pilot, every entry was below 1,250 m agl, so a
+# height cap would change little. Provisional.
+VALLEY_ENTRY_TOP_M = None
