@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>What the Great Salt Lake dust model currently does</title>
+<style>
+  @page {
+    size: Letter;
+    margin: 1.7cm 1.8cm 1.9cm 1.8cm;
+    @bottom-center {
+      content: counter(page);
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 9px;
+      color: #888;
+    }
+  }
+  body { font-family: Georgia, "Times New Roman", serif; font-size: 11px; line-height: 1.48; color: #232323; }
+  h1, h2, h3 { font-family: "Helvetica Neue", Arial, sans-serif; color: #16324a; page-break-after: avoid; }
+  h1 { font-size: 22px; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 15px; border-bottom: 2px solid #16324a; padding-bottom: 3px; margin: 22px 0 8px; }
+  h3 { font-size: 12px; color: #b5651d; margin: 14px 0 4px; }
+  .kicker { font-family: "Helvetica Neue", Arial, sans-serif; text-transform: uppercase; letter-spacing: 1.6px; font-size: 10px; color: #b5651d; margin-bottom: 8px; }
+  .sub { font-size: 12px; color: #444; margin: 0 0 14px; }
+  p { margin: 6px 0; }
+  ul { margin: 4px 0 8px; padding-left: 18px; }
+  li { margin-bottom: 3px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 9.6px; page-break-inside: avoid; }
+  th, td { border: 1px solid #cfcfcf; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #16324a; color: white; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: normal; font-size: 8.6px; text-transform: uppercase; letter-spacing: 0.3px; }
+  tr:nth-child(even) td { background: #f7f7f7; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .eq { background: #f4f0e8; border-left: 4px solid #b5651d; padding: 7px 12px; margin: 8px 0; page-break-inside: avoid; text-align: center; font-size: 12px; }
+  .eq .note { display: block; text-align: left; font-size: 9.5px; color: #555; margin-top: 3px; }
+  code { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9.5px; background: #eee; padding: 0 3px; }
+  .small { font-size: 9px; color: #666; }
+</style>
+</head>
+<body>
+
+<div class="kicker">Great Salt Lake dust model</div>
+<h1>What the model currently does</h1>
+<p class="sub">The equations as implemented, which stages are finished, the 2022 results, and what those results are solid enough to support. Follows <b>GSL_Dust_Model_Guide.pdf</b> and <b>GSL_Dust_Model_Implementation_Plan.pdf</b>.</p>
+<p>The simulation period is calendar year 2022 (1 January 2022 through 1 January 2023, UTC). 2022 contains the November record-low lake and has hourly PM10 at Wasatch Front monitors. The year-long arrival numbers in this note come from the simple transfer model (Stage 3.1). The wind-model replacement (Stage 3.2) is built and has been exercised on sample hours. It is not yet the source of the year-long totals.</p>
+
+<h2>1. The question</h2>
+<p>The model predicts PM10 dust, and the arsenic on that dust, moving from Great Salt Lake sediment into the Salt Lake Valley.</p>
+<p>Two outputs:</p>
+<ul>
+  <li><b>Arrival mass.</b> Cumulative dust <i>R</i> and arsenic <i>R</i><sub>As</sub> that have entered the valley, in kilograms.</li>
+  <li><b>Arrival rate.</b> <i>dR/dt</i> and <i>dR</i><sub>As</sub><i>/dt</i>, in kilograms per hour.</li>
+</ul>
+<p>The model stops at arrival. It does not estimate breathing exposure or health effects.</p>
+<p>The scientific use it is built for is a lake-level experiment: hold the hourly weather fixed and change only the water level, by arm. Any change in valley arrival then comes from how much lakebed is dry.</p>
+
+<h2>2. The picture, in one pass</h2>
+<p>The lakebed is a lattice of 1 km squares. For each square <i>i</i> and each hour, the model keeps four masses and asks four questions.</p>
+<table>
+<tr><th>Symbol</th><th>Meaning</th><th>Units</th></tr>
+<tr><td><i>S</i><sub>i</sub></td><td>PM10-emittable sediment still on the bed</td><td>kg</td></tr>
+<tr><td><i>I</i><sub>i</sub></td><td>Dust from that cell now airborne</td><td>kg</td></tr>
+<tr><td><i>R</i></td><td>Dust that has entered the valley</td><td>kg</td></tr>
+<tr><td><i>R</i><sub>As</sub></td><td>Arsenic that has entered the valley</td><td>kg</td></tr>
+</table>
+<ol>
+  <li><b>Is the square above water?</b> Lake level against the terrain gives the exposed fraction <i>X</i><sub>i</sub> (0 to 1).</li>
+  <li><b>Can that dry ground blow?</b> Crust, recent rain, snow, and a wet fringe along the shoreline give the erodibility <i>&phi;</i><sub>i</sub> (0 to 1). Exposed ground can be crusted and unable to emit, so <i>&phi;</i> is allowed to be zero.</li>
+  <li><b>Is the wind strong enough, and how much dust is there to pick up?</b> Friction velocity against a threshold, times the sediment still in <i>S</i><sub>i</sub>, gives the emission.</li>
+  <li><b>Of the dust that leaves the ground, how much enters the valley?</b> In the simple model, wind direction and distance decide. In the wind model, particle trajectories decide, and each particle is counted the first time it enters the valley.</li>
+</ol>
+<p>Arsenic does not have its own wind. It rides on the dust at a cell-specific sediment concentration, multiplied by an enrichment for the fine particles that actually travel.</p>
+<p>There are 6,250 lakebed cells. At the top of the mapped bed (4,215 ft NAVD88, about the 1986&ndash;87 high) they cover 5,781 km&sup2;.</p>
+
+<h2>3. The mathematics</h2>
+
+<h3>3.1 Exposure</h3>
+<p><i>X</i><sub>i</sub>(<i>t</i>) is geometry. No statistical model is involved.</p>
+<p>The terrain is the USGS half-meter topobathymetric elevation model, read at about 16 m and analyzed at 20 m, so each 1 km cell contains a small elevation curve rather than one average height. Lakebed is terrain at or below 4,215 ft NAVD88.</p>
+<p>Gauges report NGVD29 feet (USGS parameter 62614). The terrain is NAVD88 meters. Before the two are combined,</p>
+<div class="eq"><i>h</i><sub>NAVD88</sub> = <i>h</i><sub>NGVD29</sub> + 3.47585958 ft</div>
+<p>That is the USGS VERTCON offset at Saltair, then converted at 0.3048 m per foot. This conversion is unit-tested.</p>
+<p>Levels are by arm:</p>
+<ul>
+  <li>North arm: USGS 10010100 (Great Salt Lake near Saline).</li>
+  <li>South arm, Farmington Bay, and Bear River Bay: USGS 10010000 (Saltair). The bays are assigned the south-arm gauge as a provisional choice, because they connect to the south arm.</li>
+  <li>The railroad causeway (Union Pacific Lakeside Subdivision) is the arm divide.</li>
+  <li>A daily mean is held constant through the local day. Missing days inside the record are interpolated.</li>
+</ul>
+<p>For each cell, <i>X</i><sub>i</sub> is the fraction of the cell area whose lakebed pixels sit above that arm's water level. The same curves are stored at the USGS table spacing, 0.01 ft from 4,170 to 4,215 ft NAVD88, so a new level is a table lookup. Below 4,170 ft NAVD88 (about 4,166.5 ft on the gauge scale) the mapped bed is fully exposed.</p>
+
+<h3>3.2 Erodibility</h3>
+<p>The guide's preferred erodibility is a random-forest or gradient-boosted model trained on PI-SWERL field labels. Those labels are not in hand, so the implementation uses the guide's named fallback, a physics product:</p>
+<div class="eq"><i>&phi;</i><sub>i</sub>(<i>t</i>) = <i>&phi;</i><sub>surface, i</sub> &times; 1{recent rain &lt; 2 mm} &times; 1{snow &lt; 1 cm} &times; <i>f</i><sub>fringe, i</sub>(<i>t</i>)</div>
+<ul>
+  <li><i>&phi;</i><sub>surface, i</sub> is the local share of lakebed survey points that are dust hot spots in Perry, Crosman, and Hoch (2019), Appendix C: no vegetation, visible fines, and no crust or only a shallow erodible crust. Nearby points are averaged with a 5 km Gaussian kernel and shrunk toward the survey-wide share where points are sparse. A multiplier <i>&phi;</i><sub>scale</sub> = 1.23 brings the parsed hot-spot count in line with the report's own 8.5 percent (446 of 5,246 points). The parsed table itself found 366.</li>
+  <li>Recent rain is an exponentially fading memory of hourly precipitation, with a 3-day e-folding time. While that memory exceeds 2 mm, the surface is treated as wetter than the roughly 4 percent soil moisture that shuts off emission on Great Salt Lake playa, and <i>&phi;</i> = 0.</li>
+  <li>Snow deeper than 1 cm shuts emission off.</li>
+  <li><i>f</i><sub>fringe</sub> is the share of the cell's exposed bed that sits more than 0.3 m above the water line, outside the capillary fringe. It is <i>X</i><sub>i</sub>(<i>h</i> + 0.3 m) / <i>X</i><sub>i</sub>(<i>h</i>).</li>
+</ul>
+<p>The numbers 2 mm, 3 days, 0.3 m, and the playa roughness below are marked interim. They stand in for Great Salt Lake field constraints that are only partly in hand.</p>
+
+<h3>3.3 Wind and the threshold law</h3>
+<p>Friction velocity over exposed bed is computed from HRRR 10 m wind with a smooth-playa roughness, because HRRR's own land mask does not follow the shoreline. In 2022 HRRR treats much of the south arm as water (roughness 0) and much of the rest as vegetated land (roughness 5&ndash;7 cm). A drying playa is closer to 0.1&ndash;1 mm. HRRR's own friction velocity is stored and is not used for emission.</p>
+<p>Neutral log law, von K&aacute;rm&aacute;n constant 0.4, wind at 10 m:</p>
+<div class="eq"><i>u</i>*<sub>i</sub>(<i>t</i>) = 0.4 &times; <i>U</i><sub>10, i</sub>(<i>t</i>) / ln(10 / <i>z</i><sub>0</sub>), &nbsp;&nbsp; <i>z</i><sub>0</sub> = 3 &times; 10<sup>&minus;4</sup> m</div>
+<p>HRRR grid-relative winds are rotated to true north before any direction is used. Missing HRRR hours are treated as calm and dry and are counted in the diagnostics.</p>
+<p>Emission rate coefficient (per second):</p>
+<div class="eq"><i>&beta;</i><sub>i</sub>(<i>t</i>) = <i>K</i> &times; <i>X</i><sub>i</sub>(<i>t</i>) &times; <i>&phi;</i><sub>i</sub>(<i>t</i>) &times; [max(<i>u</i>*<sub>i</sub>(<i>t</i>) &minus; <i>u</i>*<sub>t</sub>, 0)]<sup><i>p</i></sup></div>
+<p>Central values: threshold <i>u</i>*<sub>t</sub> = 0.36 m/s (range 0.24&ndash;0.56, from PI-SWERL on Lordsburg Playa, New Mexico, not Great Salt Lake), wind-sensitivity exponent <i>p</i> = 3. Below the threshold, <i>&beta;</i> = 0.</p>
+<p><i>K</i> is calibrated so that a full reservoir, a fully exposed and fully erodible cell, and a reference friction velocity of 0.8 m/s reproduce a reference PM10 flux of 3 &times; 10<sup>&minus;6</sup> kg m<sup>&minus;2</sup> s<sup>&minus;1</sup>:</p>
+<div class="eq"><i>K</i> = <i>F</i><sub>ref</sub> &times; <i>A</i><sub>cell</sub> / [(<i>u</i>*<sub>ref</sub> &minus; <i>u</i>*<sub>t</sub>)<sup><i>p</i></sup> &times; <i>S</i><sub>cell, full</sub>]</div>
+<p><i>A</i><sub>cell</sub> is 1 km&sup2; and <i>S</i><sub>cell, full</sub> is the areal loading times that area. The reference flux and its range (0.56 to 25 mg m<sup>&minus;2</sup> s<sup>&minus;1</sup>) are Lordsburg maximum fluxes, from a crusted lake surface to a disturbed delta. A fitting routine exists for the day a Great Salt Lake PI-SWERL table is available. <i>K</i>, <i>p</i>, and <i>u</i>*<sub>t</sub> are not tuned to valley PM10 monitors.</p>
+
+<h3>3.4 Sediment on the bed</h3>
+<p>Initial emittable loading is 0.026 kg m<sup>&minus;2</sup>, described as about 1 mm of loose material at 1,300 kg m<sup>&minus;3</sup> with 2 percent in the PM10 size range. Replenishment <i>G</i> is the same areal rate per year, so the reservoir is restocked about once a year. Both numbers are interim ranges, not independent field estimates.</p>
+<p>Replenishment is applied on exposed ground only, scaled by <i>X</i><sub>i</sub>(<i>t</i>). Submerged cells do not accumulate an emittable pile underwater.</p>
+<div class="eq"><i>dS</i><sub>i</sub> / <i>dt</i> = <i>G</i><sub>i</sub>(<i>t</i>) &minus; <i>&beta;</i><sub>i</sub>(<i>t</i>) &times; <i>S</i><sub>i</sub></div>
+
+<h3>3.5 The simple transfer model</h3>
+<p>While dust is airborne it sits in a well-mixed compartment <i>I</i><sub>i</sub> and leaves by first-order transfer:</p>
+<div class="eq">
+  <i>dI</i><sub>i</sub>/<i>dt</i> = <i>&beta;</i><sub>i</sub> <i>S</i><sub>i</sub> &minus; (<i>k</i><sub>V,i</sub> + <i>k</i><sub>L,i</sub>) <i>I</i><sub>i</sub><br>
+  <i>dR</i>/<i>dt</i> = sum over cells of <i>k</i><sub>V,i</sub> <i>I</i><sub>i</sub><br>
+  <i>dR</i><sub>As</sub>/<i>dt</i> = sum over cells of <i>c</i><sub>As,i</sub> &times; <i>&eta;</i><sub>i</sub> &times; <i>k</i><sub>V,i</sub> <i>I</i><sub>i</sub>
+</div>
+<p><i>k</i><sub>V</sub> is transfer into the valley. <i>k</i><sub>L</sub> is removal by deposition or by transport somewhere other than the valley.</p>
+<p>Documented basis, not tuned to monitors:</p>
+<ul>
+  <li>Advective loss from the cell is wind speed divided by distance to the valley boundary, with distance floored at 500 m.</li>
+  <li>If the downwind bearing falls inside the angular sector the valley occupies as seen from the cell, that loss is <i>k</i><sub>V</sub>. Otherwise it is transport elsewhere and joins <i>k</i><sub>L</sub>.</li>
+  <li>Dry deposition <i>v</i><sub>dep</sub> / <i>H</i> is added to <i>k</i><sub>L</sub> in every hour. Central values are <i>v</i><sub>dep</sub> = 0.01 m/s and a mixed-layer depth <i>H</i> = 1,000 m.</li>
+</ul>
+<p>The valley receptor is Salt Lake County with the lakebed removed, so a source cell is not already inside the valley. Dust that moves into <i>R</i> has left <i>I</i>, so each kilogram is counted once.</p>
+<p>Coefficients are held constant within each hour and the linear system is solved exactly. With one hour as the step,</p>
+<div class="eq"><i>S</i>(<i>t</i> + &Delta;<i>t</i>) = <i>S</i>(<i>t</i>) &times; e<sup>&minus;<i>&beta;</i> &Delta;<i>t</i></sup> + <i>G</i> &times; (1 &minus; e<sup>&minus;<i>&beta;</i> &Delta;<i>t</i></sup>) / <i>&beta;</i></div>
+<p>and the analogous exact update for <i>I</i>. The forms used in code stay accurate when <i>&beta;</i> is tiny, which is the usual case: a cell barely above threshold. Mass closes to rounding error. Sediment lost equals dust emitted, and dust emitted equals the change in airborne dust plus valley arrival plus removal. This is tested.</p>
+
+<h3>3.6 Arsenic</h3>
+<p>Sediment concentration <i>c</i><sub>As,i</sub> is a Gaussian-process kriging (Mat&eacute;rn kernel) of log arsenic from USGS sediment samples in the 2018&ndash;19 and 2022 dust releases. Only samples on the mapped lakebed are used. Each site contributes the mean of its finest available size fraction. The fitted surface is nearly flat: about 18.5&ndash;18.7 ppm across the 6,250 cells, from 14 lakebed sites. The 5th and 95th percentile surfaces from the kriging standard deviation are what the chemistry ensemble perturbs.</p>
+<p>The samples are not PM10-size-matched, so enrichment <i>&eta;</i> is taken from Perry et al. (2019) Appendix G, which resuspended lakebed soil through a PM10 inlet: a median of 37 mg/kg at 120 lakebed sites. Dividing by the kriged sediment arsenic gives <i>&eta;</i> = 1.75 as the central value (measured site pairs within 5 km), with an ensemble range of 1.0 to 3.6. Arsenic arrival is dust arrival weighted by <i>c</i><sub>As</sub> <i>&eta;</i>.</p>
+
+<h3>3.7 The wind-model replacement</h3>
+<p>Stage 3.2 replaces <i>k</i><sub>V</sub> and <i>k</i><sub>L</sub> with NOAA HYSPLIT driven by HRRR. Emissions <i>&beta; S</i> are unchanged.</p>
+<p>HYSPLIT's transport and deposition are linear in mass, so the implementation does not rerun HYSPLIT for every scenario. Lakebed cells are grouped into 10 km zones. Each zone is released as a unit source (1 kg/h). Every particle's first position inside the valley is recorded, and the mass it still carries at that moment is stored by release hour and arrival hour. For any later emission series <i>E</i>,</p>
+<div class="eq">arrival at hour <i>h</i> = sum over zones <i>z</i> and release hours <i>t</i> of &nbsp; <i>E</i>(<i>t</i>, <i>z</i>) &times; <i>A</i>(<i>z</i>, <i>t</i>, <i>h</i>)</div>
+<p>where <i>A</i> is kilograms entering the valley at hour <i>h</i> per kilogram released from that zone at hour <i>t</i>. The same weights applied to arsenic emissions give the arsenic arrival rate.</p>
+<p>Particle sizes 2.5, 5, and 10 &micro;m travel as separate pollutants in the same run. The central arrival uses 5 &micro;m. That is the guide's uncertainty-bounds option for particle size. The first-entry rule is implemented on HYSPLIT's particle dumps, with a continuity check so a particle cannot be counted twice if it leaves and re-enters.</p>
+<p>This machinery is in the code and covered by tests (archive packing, and linearity of the superposition). Two transfer chunks exist on disk (1 January and 5 January 2022). A pilot comparison of arrival fractions against the simple model, for Farmington Bay, the south shore, and the western north arm, shows hours where the two disagree sharply. The year-long scenario totals below are still the simple model.</p>
+
+<h3>3.8 Scenarios and uncertainty</h3>
+<p>A scenario reruns the identical 2022 HRRR weather with a different lake level. Constant levels, in NGVD29 feet as the gauges report them, applied to both arms:</p>
+<table>
+<tr><th>Name</th><th class="num">Level (ft NGVD29)</th></tr>
+<tr><td>Record low</td><td class="num">4,188.5</td></tr>
+<tr><td></td><td class="num">4,192</td></tr>
+<tr><td></td><td class="num">4,195</td></tr>
+<tr><td>Strike Team healthy low</td><td class="num">4,198</td></tr>
+<tr><td>Strike Team healthy high</td><td class="num">4,205</td></tr>
+</table>
+<p>The observed-2022 run uses the actual gauges, which vary through the year and differ by arm.</p>
+<p>Uncertainty is an ensemble that perturbs one component at a time, then all of them together, so it is clear which component dominates:</p>
+<ul>
+  <li><b>Emission:</b> playa roughness, threshold, exponent, reference flux, initial sediment, replenishment, hot-spot scale, rain memory, fringe, snow.</li>
+  <li><b>Chemistry:</b> <i>&eta;</i>, plus a shift of log <i>c</i><sub>As</sub> by the kriging standard deviation.</li>
+  <li><b>Transport, simple model only:</b> deposition velocity and mixed-layer depth. HYSPLIT transport uncertainty is meant to come from its own runs, which are not in the year-long table yet.</li>
+</ul>
+<p>Parameters marked interim in the parameter file are the first ones to replace. Provisional choices, recorded in one place, are the valley boundary, the bay gauges, the particle-size treatment, the simulation year, the scenario levels, and where replenishment lands.</p>
+
+<h2>4. What is implemented</h2>
+<table>
+<tr><th style="width:22%">Stage</th><th style="width:38%">Guide requirement</th><th>State</th></tr>
+<tr><td>1. Grid and hourly inputs</td><td>1 km lakebed, levels by arm, datum conversion, <i>X</i><sub>i</sub>(<i>t</i>), hourly winds and moisture</td><td>Built and checked. Wet area matches the USGS elevation-area tables within 0.12 percent above 4,180 ft. Recomputing exposure at 0.5, 1, and 2 km leaves total exposed area unchanged at the levels tested. Hourly HRRR for 2022 is on the lattice.</td></tr>
+<tr><td>2. Emissions and chemistry</td><td>Threshold law, <i>&phi;</i>, <i>S</i> and <i>G</i>, kriged <i>c</i><sub>As</sub>, <i>&eta;</i></td><td>Built. <i>&phi;</i> is the physics fallback. The threshold law uses Lordsburg Playa fluxes, flagged interim. Arsenic kriging and the Perry enrichment are in place. <i>S</i>(0) and <i>G</i> are order-of-magnitude ranges, not independent field estimates.</td></tr>
+<tr><td>3.1 Simple transfer</td><td>Mass balance in kg, first entry once, documented <i>k</i><sub>V</sub> and <i>k</i><sub>L</sub></td><td>Built, exact hourly solution, mass conservation tested. This is the year-long result.</td></tr>
+<tr><td>3.2 HYSPLIT</td><td>Replace transfer with HRRR-driven dispersion of <i>&beta;S</i>, first entry once, concentrations at monitors</td><td>Code, unit-source design, and first-entry accounting are built. Sample hours have been run. The full year has not, so monitor concentrations for 2022 do not exist yet.</td></tr>
+<tr><td>4. Validation</td><td>Held-out events and locations; compare monitors to concentrations, never to <i>R</i></td><td>The held-out design is frozen (seed 2026, one third of episodes and monitors). PM10 for the Wasatch Front is ingested and episodes are defined (150 &micro;g/m&sup3; at two or more monitors, gaps under 6 hours merged). No score against the model has been computed.</td></tr>
+<tr><td>5. Lake-level scenarios</td><td>Same weather, different level, arrival mass and rate, uncertainty by component</td><td>Run for 2022 with the simple transfer model, including a 40-member ensemble. Figures are in the results folder.</td></tr>
+</table>
+<p>Fourteen unit and chain tests pass, covering the datum offset, exposure lookup, rain memory, sector geometry, ODE mass conservation, the full chain's response to wind and lake level, and HYSPLIT superposition.</p>
+
+<h2>5. The 2022 numbers from the simple model</h2>
+<p>Central parameters, dust and arsenic entering the valley over the year:</p>
+<table>
+<tr><th>Lake</th><th class="num">Exposed bed (km&sup2;)</th><th class="num">Emitting bed (km&sup2;)</th><th class="num">Dust emitted (t)</th><th class="num">Dust arrived (t)</th><th class="num">Arsenic arrived (kg)</th></tr>
+<tr><td>Record low, 4,188.5 ft</td><td class="num">3,466</td><td class="num">230</td><td class="num">4,980</td><td class="num">601</td><td class="num">14.5</td></tr>
+<tr><td>Observed 2022</td><td class="num">3,362</td><td class="num">221</td><td class="num">4,543</td><td class="num">504</td><td class="num">12.2</td></tr>
+<tr><td>4,192 ft</td><td class="num">3,155</td><td class="num">207</td><td class="num">3,972</td><td class="num">418</td><td class="num">10.1</td></tr>
+<tr><td>4,195 ft</td><td class="num">2,736</td><td class="num">173</td><td class="num">3,108</td><td class="num">236</td><td class="num">5.7</td></tr>
+<tr><td>Healthy low, 4,198 ft</td><td class="num">2,100</td><td class="num">128</td><td class="num">2,255</td><td class="num">140</td><td class="num">3.4</td></tr>
+<tr><td>Healthy high, 4,205 ft</td><td class="num">575</td><td class="num">28</td><td class="num">413</td><td class="num">29</td><td class="num">0.7</td></tr>
+</table>
+<p>Exposed and emitting areas are hourly means. About 7 percent of the exposed bed is treated as able to emit. In the observed-2022 central run, about 11 percent of the dust that leaves the bed is counted as entering the valley. The rest is deposited, blown elsewhere, or still aloft at the end of the hour it was emitted.</p>
+<p>For the observed 2022 lake, a 40-member ensemble gives these 5th&ndash;95th percentile ranges:</p>
+<table>
+<tr><th>What is varied</th><th>Dust arrival (t)</th><th>Arsenic arrival (kg)</th></tr>
+<tr><td>Emission parameters only</td><td>13 &ndash; 4,740</td><td>0.3 &ndash; 114</td></tr>
+<tr><td>Chemistry only</td><td>504 &ndash; 504</td><td>6.7 &ndash; 17.8</td></tr>
+<tr><td>Simple-model transport only</td><td>464 &ndash; 521</td><td>11.2 &ndash; 12.6</td></tr>
+<tr><td>All three together</td><td>4 &ndash; 6,390</td><td>0.07 &ndash; 164</td></tr>
+</table>
+<p>Chemistry does not move the dust mass. It moves the arsenic by about a factor of three. The simple transport model's own parameters move arrival by about 10 percent. Emission parameters move arrival by more than two orders of magnitude. The joint range is the emission range.</p>
+
+<h2>6. What the model is currently good at</h2>
+<p><b>The map of dry lakebed.</b> This is the strongest part. Water level, vertical datum, arm assignment, and sub-cell terrain are combined in a way that reproduces the USGS area tables, and the total dry area does not depend on whether the grid is 0.5, 1, or 2 km. A stated lake level can be turned into exposed square kilometers with confidence. In 2022 that is about 3,360 km&sup2; dry on average, of which about 220 km&sup2; is treated as erodible.</p>
+<p><b>Bookkeeping of mass.</b> Once a kilogram leaves the bed, the simple model can say where it went: still airborne, entered the valley, or removed. The accounting closes, arrival never double-counts, and the hourly solution does not blow up when the wind is barely over the threshold. That makes the scenario comparisons internally consistent. The same kilogram is not created or lost because the lake level changed.</p>
+<p><b>The shape of the lake-level effect, under one year of real weather.</b> With 2022 winds held fixed, raising the lake from the record low to the top of the healthy range cuts central valley arrival from about 600 tonnes to about 30 tonnes, and arsenic from about 15 kg to about 0.7 kg. The drop is steepest between 4,192 and 4,198 ft. Holding the lake at the record low for the whole year, rather than letting it follow the actual 2022 gauges, adds about 100 tonnes. 2022 was already a low year, so a full year at the record low is a modest change. Refilling the lake is a large one. This shape is what the model can support today.</p>
+<p><b>Which uncertainty matters.</b> The ensemble is built so emission, chemistry, and transport are reported separately. On the evidence of that ensemble, further work on deposition velocity or on the arsenic multiplier will not tighten the dust total. The dust total moves when the threshold, the reference flux, the loose-sediment loading, or the erodible fraction moves. Arsenic arrival, given a dust mass, is a narrower question: the central 12 kg sits in a chemistry range of roughly 7 to 18 kg.</p>
+<p><b>A clean test, ready for when concentrations exist.</b> The events and monitors that must stay out of any future calibration are already chosen and written down. Comparisons, when they happen, are required to use concentrations at the monitor. Cumulative valley arrival <i>R</i> is not a concentration and will not be scored against PM10.</p>
+<p><b>A path from the simple model to real trajectories.</b> The wind model is wired so that one set of unit-source runs serves every lake level and every ensemble member. Sample hours already show that the simple transfer rates and HYSPLIT can disagree, especially at Farmington Bay, where the simple model sometimes sends almost nothing to the valley in an hour when HYSPLIT sends a large fraction, and the reverse also occurs. The year-long tonnes should be read as the simple model's accounting. Replacing <i>k</i><sub>V</sub> and <i>k</i><sub>L</sub> can rearrange which hours and which shores contribute.</p>
+
+<h2>7. How to read a result from this model</h2>
+<p>A result is in good standing when it is a comparison of lake levels under the same weather, and when it is stated as a direction and a rough factor. From the central run: under 2022 weather, a lake held at 4,205 ft delivers on the order of twenty times less valley dust than a lake held at the record low.</p>
+<p>A result is ahead of the evidence when it is an absolute tonne or an absolute kilogram, a claim about a particular dusty day in the valley, or a claim that the simple model has the right shore-by-shore timing. The emission law is still calibrated to another playa. The year-long transport is still first-order. Neither has been scored against held-out monitors.</p>
+<p>Extending a drought, in this model, means holding a low level for this weather, or for additional years that reuse this weather. It does not mean inventing a drier wind climate. Extra years, with the current replenishment, restock the loose surface about once a year, so they add another year of arrival rather than exhausting the bed. Levels can be set down to about 4,166.5 ft on the gauge scale. Below that, the terrain tables have no further bed to uncover.</p>
+
+<p class="small">Prepared 9 October 2026 from the implemented code and the 2022 runs in results/tables. Standard: docs/GSL_Dust_Model_Guide.pdf.</p>
+
+</body>
+</html>
