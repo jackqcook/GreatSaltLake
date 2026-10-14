@@ -186,7 +186,7 @@ def run_zone(z, t0, t1, valley_utm, windy, out=OUT):
     dump_mb = 0.0
     fe = tracker.result()
     fe["entry"] = fe["entry"].dt.floor("h")
-    fe["diameter_um"] = np.asarray(DIAMETERS_UM)[fe.pollutant.to_numpy(int) - 1] if len(fe) else []
+    fe["diameter_um"] = np.asarray(DIAMETERS_UM, dtype=float)[fe.pollutant.to_numpy(int) - 1]
     agg = (fe.groupby(["diameter_um", "release", "entry"]).agg(mass=("mass", "sum"), n=("mass", "size"),
                                                                  agl_max=("agl", "max")).reset_index())
     agg["zone"] = z.zone

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Great Salt Lake Dust Model: Approach, Data, Results and Takeaways</title>
+<style>
+  @page { size: Letter; margin: 1.6cm 1.8cm 1.8cm 1.8cm;
+    @bottom-center { content: counter(page); font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9px; color: #888; } }
+  @page :first { @bottom-center { content: none; } }
+  body { font-family: Georgia, "Times New Roman", serif; font-size: 10.6px; line-height: 1.5; color: #232323; }
+  h1, h2, h3 { font-family: "Helvetica Neue", Arial, sans-serif; color: #16324a; page-break-after: avoid; }
+  h1 { font-size: 25px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 15px; border-bottom: 2px solid #16324a; padding-bottom: 3px; margin: 20px 0 8px; }
+  h2.newpage { page-break-before: always; margin-top: 0; }
+  h3 { font-size: 11.6px; color: #b5651d; margin: 13px 0 4px; }
+  .kicker { font-family: "Helvetica Neue", Arial, sans-serif; text-transform: uppercase; letter-spacing: 1.6px; font-size: 9.5px; color: #b5651d; margin-bottom: 8px; }
+  .meta { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9.5px; color: #555; margin: 0 0 16px; }
+  .lede { font-size: 12px; color: #333; margin: 0 0 14px; }
+  p { margin: 5px 0; }
+  ul, ol { margin: 4px 0 8px; padding-left: 18px; }
+  li { margin-bottom: 3px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 10px; font-size: 9.2px; page-break-inside: avoid; }
+  th, td { border: 1px solid #cfcfcf; padding: 3.5px 6px; text-align: left; vertical-align: top; }
+  th { background: #16324a; color: white; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: normal; font-size: 8.4px; text-transform: uppercase; letter-spacing: 0.3px; }
+  tr:nth-child(even) td { background: #f7f7f7; }
+  td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  figure { margin: 10px 0 12px; page-break-inside: avoid; }
+  figure img { width: 100%; display: block; }
+  figure.half img { width: 62%; margin: 0 auto; }
+  figure.narrow img { width: 46%; margin: 0 auto; }
+  figcaption { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 8.8px; color: #444; margin-top: 4px; line-height: 1.4; }
+  figcaption b { color: #16324a; }
+  .box { border: 1px solid #16324a; background: #f2f5f8; padding: 9px 12px; margin: 10px 0; page-break-inside: avoid; }
+  .box h3 { margin-top: 0; color: #16324a; }
+  .warn { border-left: 4px solid #b5651d; background: #fbf4ee; padding: 7px 11px; margin: 9px 0; page-break-inside: avoid; }
+  .tag { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 8px; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .ok { background: #e3f1e3; color: #1d5a1d; } .prov { background: #fbf0d9; color: #7a5200; } .gap { background: #f8e1d6; color: #8a3a12; }
+  .cols { display: flex; gap: 14px; } .cols > div { flex: 1; }
+  .toc { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10px; columns: 2; margin: 6px 0 4px; }
+  .toc div { margin-bottom: 2px; }
+  code { font-family: Menlo, monospace; font-size: 9px; background: #f1f1f1; padding: 0 3px; }
+</style>
+</head>
+<body>
+
+<div class="kicker">Great Salt Lake dust model · full report</div>
+<h1>Dust and arsenic from the Great Salt Lake lakebed reaching the Salt Lake Valley: how the model works, what it shows, and what it can and cannot tell us yet</h1>
+<p class="meta">Prepared 14 October 2026 · Simulation year: 2022 · Modeling standard: <i>GSL_Dust_Model_Guide.pdf</i> · Code: github.com/jackqcook/GreatSaltLake (branch <code>hysplit-run-fixes</code>, built on <code>master</code> at b1ed6e7)</p>
+
+<div class="box">
+<h3>Key takeaways</h3>
+<ol>
+  <li><b>The full model chain now runs, as the guide specifies.</b> Lake level and terrain set exposed lakebed; HRRR winds, rain and snow drive emissions; and <b>HYSPLIT, driven by HRRR weather</b>, carries the dust to the Salt Lake Valley. Every dust particle is counted once, on its first entry into the valley.</li>
+  <li><b>Central estimate for 2022: about 450 t of lakebed PM10 dust and about 15 kg of arsenic reached the valley.</b> That's roughly 11% of the ~4,100 t the exposed lakebed emitted. 82% of it arrived from April to June, and three storm days alone delivered a third.</li>
+  <li><b>Lake level matters a great deal.</b> Holding 2022's weather fixed, arrival falls from about 510 t at the record-low lake (4,188.5 ft) to about 170 t at 4,198 ft and 45 t at 4,205 ft, the healthy range's ends. That is an 11× drop from record low to the top of the healthy range, and every one of the 200 ensemble members shows a drop of 8–18×.</li>
+  <li><b>The absolute amounts are very uncertain.</b> The 5–95% range for 2022 is about 2 t to 11,500 t. Almost all of that comes from the emission law (threshold friction velocity and reference flux), which still uses field data from a New Mexico playa, because Great Salt Lake PI-SWERL flux tables could not be obtained.</li>
+  <li><b>Validation shows the right timing but magnitudes far too low.</b> The model's biggest lake-dust days are the observed spring and June windstorms, and it puts essentially no lake dust in the July–September episodes, which are likely other sources. But modeled lake dust at monitors peaks at ~10–24 µg/m³ when observed PM10 reached 300–800 µg/m³. Emissions are probably too small. Per the guide, they must be calibrated against field fluxes, not tuned to monitors.</li>
+  <li><b>Two new field datasets were added.</b> PM10-sized arsenic at 120 lakebed sites shows airborne dust carries about 1.75× the arsenic of the sediment (η, now measured). A 5,300-point surface survey shows dust-prone ground is concentrated in Bear River Bay and Farmington Bay.</li>
+</ol>
+</div>
+
+<div class="toc">
+  <div>1. Purpose and scope</div><div>2. How we approached it</div><div>3. The data</div><div>4. Stage 1: grid and exposure</div>
+  <div>5. Stage 2: emissions and chemistry</div><div>6. Stage 3: transport with HYSPLIT</div><div>7. Results for 2022</div>
+  <div>8. Stage 5: lake-level scenarios</div><div>9. Uncertainty</div><div>10. Stage 4: validation</div><div>11. What to take away</div>
+  <div>12. Gaps and next steps</div><div>Appendices A–D</div>
+</div>
+
+<h2>1. Purpose and scope</h2>
+<p>The model estimates how much PM10 dust (particles under 10 µm) and arsenic travel from exposed Great Salt Lake lakebed into the Salt Lake Valley. Its outputs are <b>arrival mass</b> (R and R<sub>As</sub>, cumulative kilograms entering the valley) and <b>arrival rate</b> (dR/dt and dR<sub>As</sub>/dt, kilograms per hour). As the guide specifies, it stops at arrival. It does not estimate exposure or health effects. The valley is defined as Salt Lake County minus the lakebed (a provisional choice, Appendix B). The simulation year is 2022, which includes the record-low lake of November 2022 and hourly PM10 at Wasatch Front monitors.</p>
+
+<h2>2. How we approached it</h2>
+<p><b>One standard.</b> <i>GSL_Dust_Model_Guide.pdf</i> fixes the equations, the compartments (S, I, R, R<sub>As</sub>, all in kg), the method for each component, the assumptions to test, and the build order. We followed it without substituting methods. Where data could not support a guide method, we report a data gap instead of swapping in another method. The only alternatives used are the ones the guide names: physics-based erodibility when no field labels exist, bounding η when it can't be measured, and uncertainty bounds for particle size.</p>
+<figure><img src="compartments.png"><figcaption><b>Figure 1. The guide's mass flow for each 1 km lakebed cell i.</b> PM10-emittable sediment S is lifted by wind at rate βS into airborne dust I. The airborne dust either enters the valley (R) or deposits or blows elsewhere. The guide prototypes the airborne step with first-order rates k<sub>V</sub>, k<sub>L</sub> and then replaces it with HYSPLIT driven by HRRR. Both are done here, and HYSPLIT is the final transport.</figcaption></figure>
+<figure class="half"><img src="equations.png"><figcaption><b>Figure 2. Governing equations (from the guide).</b> X = exposed fraction of the cell, φ = erodibility, u* = friction velocity, u*<sub>t</sub> = its threshold, p = wind sensitivity, K = emission coefficient, G = sediment replenishment, c<sub>As</sub> = arsenic per kg sediment, η = arsenic enrichment in airborne particles. With HYSPLIT, the last two equations are computed from HYSPLIT's particles instead of k<sub>V</sub> I.</figcaption></figure>
+<p><b>Five stages, built in the guide's order:</b> (1) 1 km grid and hourly inputs → (2) field-calibrated emissions and chemistry → (3) dispersion (ODE prototype, then HYSPLIT) → (4) held-out validation → (5) lake-level scenarios under identical weather. Uncertainty is reported separately for emission, chemistry and transport.</p>
+<p><b>Ground rules that shaped the work.</b></p>
+<ul>
+  <li><b>No tuning to monitors.</b> Emission parameters are never adjusted to match PM10, so validation stays an honest test. The held-out events and monitors were fixed in September 2026, before any comparison.</li>
+  <li><b>Monitors are compared with HYSPLIT concentrations, never with R.</b> R is mass arriving, not air concentration.</li>
+  <li><b>Small footprint.</b> Weather is streamed and deleted after use, particle positions are processed in memory, and HYSPLIT is run once per source zone and reused for every scenario and ensemble member (Section 6).</li>
+</ul>
+
+<h2>3. The data</h2>
+<table>
+  <tr><th>Source</th><th>What it provides</th><th>Used for</th><th>Status</th></tr>
+  <tr><td>USGS gauges 10010000 (Saltair, south arm) and 10010100 (near Saline, north arm)</td><td>Daily lake level, NGVD29 ft</td><td>Exposure X by arm</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>USGS Great Salt Lake topobathymetric elevation model (bathymetry + 2016 lidar)</td><td>Lakebed elevation, NAVD88; read at ~16 m and analyzed at 20 m</td><td>Exposure X; basin tags</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>USGS elevation–area tables (2023)</td><td>Wet area by basin, 4,175–4,215 ft</td><td>Check on Stage 1</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>NOAA HRRR, 3 km, hourly (AWS archive)</td><td>10 m winds, rain, snow, plus full 3-D weather (winds, temperature, humidity, heights, vertical motion, boundary layer)</td><td>Emissions (u*, wetness, snow); HYSPLIT transport</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>NOAA HYSPLIT v5.4.2 (Mac build)</td><td>Lagrangian dispersion and deposition model</td><td>Stage 3 transport; Stage 4 concentrations</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>USGS dust and sediment data releases (2018–19 and 2022)</td><td>Sediment arsenic at 16 lakebed sites (&lt;63 µm or bulk)</td><td>c<sub>As</sub> by kriging</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>Perry, Crosman &amp; Hoch (2019), <i>Great Salt Lake Dust Plume Study</i>, Appendix G</td><td>Arsenic in resuspended PM10-size lakebed soil, 120 sites with coordinates</td><td>η measured</td><td><span class="tag ok">new</span></td></tr>
+  <tr><td>Same report, Appendix C</td><td>Surface survey: vegetation, crust type, visible fines at ~5,250 points</td><td>Erodibility φ (physics branch)</td><td><span class="tag ok">new</span></td></tr>
+  <tr><td>Van Pelt et al. (2020), Lordsburg Playa NM, PI-SWERL</td><td>PM10 threshold friction velocity and flux ranges</td><td>Threshold law, <b>as a stand-in</b></td><td><span class="tag prov">interim</span></td></tr>
+  <tr><td>Great Salt Lake PI-SWERL flux tables (Powell, Univ. of Utah MS thesis; Perry group survey)</td><td>GSL threshold, flux vs u*, depletion</td><td>Threshold law, S(0), G, φ labels</td><td><span class="tag gap">not obtainable yet</span></td></tr>
+  <tr><td>EPA AQS hourly PM10, 5 Wasatch Front monitors, 2022</td><td>Observed concentrations; 30 episodes</td><td>Stage 4 validation</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>Independent plume evidence (satellite, back-trajectories)</td><td>Whether each episode is lake dust</td><td>Stage 4 attribution</td><td><span class="tag gap">not sourced yet</span></td></tr>
+</table>
+<p><b>Vertical datums.</b> The gauges report NGVD29 feet and the terrain is NAVD88. We use USGS's conversion at Saltair, NAVD88 = NGVD29 + 3.476 ft, which is unit-tested. Scenario levels are gauge (NGVD29) readings, the datum the Great Salt Lake Strike Team's healthy range (4,198–4,205 ft) refers to.</p>
+
+<h2>4. Stage 1: grid and exposure</h2>
+<p>The lakebed is divided into <b>6,250 cells of 1 km</b> (NAD83 / UTM 12N), covering 5,781 km² up to 4,215 ft NAVD88. Each cell is tagged with its arm. Farmington and Bear River Bays take the south-arm gauge, a provisional choice. For each cell and hour, the exposed fraction X is the share of the cell's 20 m terrain pixels above that arm's water level. Because X comes from sub-cell terrain, no single average elevation stands in for the cell.</p>
+<figure><img src="../../results/figures/stage1_area_validation.png"><figcaption><b>Figure 3. Stage 1 check.</b> Summing the model's wet area by basin reproduces the USGS elevation–area tables within 0.15% at every level from 4,175 to 4,215 ft. The plan's target was 1–2%. This confirms the grid, the basin split and the datum handling together.</figcaption></figure>
+<p><b>Grid-resolution test (guide assumption).</b> Recomputing exposure at 0.5, 1 and 2 km gives identical totals and patterns: 3,466 km² exposed at the record low, 2,735 km² at 4,195 ft and 2,098 km² at 4,198 ft. That is expected, because X is built from 20 m pixels. Where resolution does matter is the HYSPLIT source zones, tested in Section 6.</p>
+
+<h2>5. Stage 2: emissions and chemistry</h2>
+<h3>Emission law</h3>
+<p>Emission follows the guide's threshold law, β = K·X·φ·max(u* − u*<sub>t</sub>, 0)<sup>p</sup>, with K calibrated so a full reservoir emits the reference flux at the reference friction velocity. Friction velocity over the lakebed comes from HRRR 10 m winds through the log law with a playa roughness length z0. HRRR's own friction velocity is not used, because HRRR treats the drying lakebed as either open water or vegetated land. <b>The threshold u*<sub>t</sub>, the exponent p and the reference flux are stand-ins from Lordsburg Playa, New Mexico</b> (Appendix A), carried with wide ranges. This is the model's biggest weakness (Sections 9–10).</p>
+<h3>Erodibility φ from a field survey</h3>
+<p>No Great Salt Lake PI-SWERL labels exist, so the guide's machine-learning branch (RF/XGBoost on field labels) is not possible. We use the guide's physics branch. φ = (surface erodible fraction) × (dry) × (no snow) × (above the capillary fringe). The surface fraction now comes from Perry et al. (2019) Appendix C. They define a <b>hot spot</b> as bare ground with visible fines and no crust or only an erodible shallow crust. Each cell gets the share of hot-spot points within about 5 km, shrunk toward the lakewide share where points are sparse. We parsed the PDF table by character position. Our counts match the report within 5% for vegetation, crust and visible fines, but our hot-spot count is 18% lower (366 vs 446 points). A scale factor of 1.0–1.5, central 1.23 to match the report, carries that difference.</p>
+<figure><img src="../../results/figures/phi_surface_map.png"><figcaption><b>Figure 4. Erodible surface fraction.</b> Left: the first prototype's uniform 9%. Right: the survey-based field, high in Bear River Bay (north-east) and Farmington Bay (south-east) and low over most of the western and central lakebed. Dots are survey hot-spot points. Bear River Bay and Farmington Bay are among the three largest hot spots the report names.</figcaption></figure>
+<h3>Sediment reservoir S(0) and replenishment G</h3>
+<p>The guide asks for independent estimates of S(0) and G, and none exist yet. Both use assumed areal values. Replenishment now accrues only on exposed lakebed (a provisional choice), not underwater. Even so, the loose-sediment reservoir grows from about 86 kt to 169 kt over 2022 while only ~4 kt is emitted. Because emission is proportional to the reservoir, it drifts upward through the year. Repeat PI-SWERL tests showing depletion would fix this.</p>
+<h3>Arsenic: c<sub>As</sub> by kriging, η now measured</h3>
+<p>Sediment arsenic c<sub>As</sub> is kriged (Gaussian process on log arsenic) from 16 USGS lakebed sites, giving about 18.5 mg/kg. The data are too sparse for the kriging to resolve much spatial pattern, so the surface is nearly flat. Perry et al. (2019) Appendix G resuspended lakebed soil from 120 sites through a PM10 inlet and measured its arsenic, which gives the PM10-size match the guide asks for. Dividing that by nearby USGS sediment arsenic measures η.</p>
+<figure><img src="../../results/figures/report_arsenic.png"><figcaption><b>Figure 5. Arsenic in airborne-size dust.</b> Left: PM10-size arsenic at 120 lakebed sites (median 37 mg/kg) against kriged sediment arsenic (~18.5 mg/kg). Right: η at the 18 site pairs within 5 km. Median 1.75 (5–95%: 1.28–2.65), above the previously assumed 1.3 (0.8–2.0). The model now uses η = 1.75 with range 1.0–3.6, the spread across all 120 sites.</figcaption></figure>
+
+<h2>6. Stage 3: transport with HYSPLIT, driven by HRRR</h2>
+<p><b>Prototype first.</b> The guide's ODE prototype (first-order transfer k<sub>V</sub>, k<sub>L</sub>, solved exactly each hour) proved the mass bookkeeping: mass closes to 10<sup>−9</sup>. It is kept for comparison.</p>
+<p><b>HRRR for HYSPLIT.</b> We wrote a converter that takes each hour of HRRR from NOAA's archive, crops it to a 450 × 450 km box around the lake on HRRR's own 3 km grid, and writes HYSPLIT's ARL format. It includes 18 pressure levels from 925 to 500 hPa and 12 surface fields. Raw downloads (~2.4 GB per day) are never saved, and only 65 MB per day is kept. Checks:</p>
+<ul>
+  <li>HYSPLIT's own tools read the files cleanly.</li>
+  <li>At four known sites, HYSPLIT's nearest grid point matches the true position.</li>
+  <li>The weather HYSPLIT sees at Salt Lake City airport is physically right: elevation 1,293 m (actual ~1,288 m), 858 hPa, 22 °C, and a 9 m/s south wind ahead of the May 3 front.</li>
+  <li>The converter caught that the GRIB reader silently converts temperatures to °C; HYSPLIT needs kelvin.</li>
+</ul>
+<p><b>Counting first valley entry once.</b> HYSPLIT writes every particle's position each minute, and a tracker follows each particle through HYSPLIT's internal renumbering. That rule was decoded and is re-checked every minute, and the run stops if particles stop matching up. A particle's mass, after HYSPLIT's dry and wet deposition along the way, counts toward R at its first minute inside the valley, and only then. Hourly snapshots were tested and rejected: on a windy day they missed 15% of entries.</p>
+<p><b>Running HYSPLIT once, using it for everything.</b> HYSPLIT's transport and deposition are linear in mass, so the lakebed is split into <b>92 source zones of 10 km</b>. Each zone is run with a unit emission (1 kg/h) for all of 2022, and the mass entering the valley is recorded by release hour. For any emission series βS, from the central run, any ensemble member or any lake level, valley arrival is the sum of emissions × these stored arrivals. Particles are released only in the 24.7% of zone-hours windy enough for <i>any</i> parameter set to emit. In all other hours the threshold law gives exactly zero for every member, which we confirmed in the central run. Three particle sizes ride in each run (2.5, 5 and 10 µm), with 5 µm central, as the guide's uncertainty bounds for size.</p>
+<figure><img src="../../results/figures/report_transport_checks.png"><figcaption><b>Figure 6. Transport checks.</b> Left: the May 3, 2022 pilot. HYSPLIT and the ODE prototype agree near the valley, but HYSPLIT moves twice as much far north-arm dust into the valley as the flow curves, which the ODE's wind-direction rule cannot see. Middle: smaller particles settle less, so more arrive. Right: splitting 10 km zones into 5 km zones changes the average arrival by under 2 percentage points.</figcaption></figure>
+<div class="cols">
+<div><figure><img src="../../results/figures/report_superposition.png"><figcaption><b>Figure 7. Checking the shortcut.</b> For each validation episode, an ordinary HYSPLIT run with the actual hourly emissions against the zone-by-zone sum. For the 17 episodes with more than 1 t arriving, the median difference is −0.7%. The one outlier (+77%, May 8) also counts dust released during the previous day's storm, which the direct run's window starts too late to include.</figcaption></figure></div>
+<div><p style="margin-top:14px"><b>Scale of the run.</b> 92 four-day periods × 92 zones × 3 particle sizes, with HYSPLIT on a fixed 1-minute step. Weather for all of 2022 was streamed through a buffer of a few days. The disk never held more than ~5 GB, mostly validation-episode weather kept for reruns. Three date ranges ran side by side in about 14 hours. Afterwards, each ensemble member or scenario takes about 9 seconds, and recalibrating emissions later needs no new HYSPLIT runs.</p>
+<p><b>Particle size.</b> Over all of 2022, the central emissions give 438 t (10 µm), 447 t (5 µm) and 462 t (2.5 µm) arriving, a ±3% transport uncertainty from size. That is small next to emission uncertainty (Section 9).</p></div>
+</div>
+
+<h2 class="newpage">7. Results for 2022 (central parameters, HYSPLIT transport)</h2>
+<table>
+  <tr><th>Quantity, 2022</th><th class="n">Value</th><th>Note</th></tr>
+  <tr><td>Mean exposed lakebed</td><td class="n">3,362 km²</td><td>observed lake levels</td></tr>
+  <tr><td>Mean emitting area (X·φ)</td><td class="n">245 km²</td><td>dry, snow-free, survey-based φ</td></tr>
+  <tr><td>PM10 dust emitted from the lakebed</td><td class="n">4,143 t</td><td></td></tr>
+  <tr><td><b>Dust reaching the Salt Lake Valley (R)</b></td><td class="n"><b>447 t</b></td><td>about 11% of emissions; ODE prototype gave 435 t</td></tr>
+  <tr><td><b>Arsenic reaching the valley (R<sub>As</sub>)</b></td><td class="n"><b>14.5 kg</b></td><td>about 32 mg per kg of arriving dust</td></tr>
+  <tr><td>Share arriving April–June</td><td class="n">82%</td><td>October 6%, September 5%, July 4%</td></tr>
+  <tr><td>Biggest single days</td><td class="n">57, 45, 45 t</td><td>May 3, April 5, May 20</td></tr>
+</table>
+<figure><img src="../../results/figures/report_seasonal.png"><figcaption><b>Figure 8. When dust arrives.</b> Arrival is concentrated in spring and early-summer windstorms, plus a fall pulse. Left: HYSPLIT and the ODE prototype agree on the season but differ month to month. HYSPLIT gives more in June and September, when flow from the northern bays curves toward the valley. Right: the year's total builds in a few steps. Three days deliver about a third of it.</figcaption></figure>
+<figure><img src="../../results/figures/report_source_maps.png"><figcaption><b>Figure 9. Where the arriving dust comes from.</b> Left: emission per km². Right: the part that reached the valley, using HYSPLIT's per-zone arrival (hence the 10 km blocks). Farmington Bay and the south-east shore dominate. They emit strongly and are closest to the valley, upwind in the frequent northerly and north-westerly storm flow. Bear River Bay emits a lot, but less of it arrives.</figcaption></figure>
+
+<h2>8. Stage 5: lake-level scenarios under identical weather</h2>
+<p>The 2022 hourly weather is held fixed and only the lake level changes, applied to both arms. The change flows through exposure → emission → HYSPLIT → arrival. Each level also has a 200-member joint ensemble that varies all emission and chemistry parameters together.</p>
+<table>
+  <tr><th>Lake level (ft, NGVD29)</th><th class="n">Dust, HYSPLIT</th><th class="n">Dust, ODE prototype</th><th class="n">5–95% (joint ensemble)</th><th class="n">Arsenic, central</th><th class="n">Exposed lakebed</th></tr>
+  <tr><td>4,188.5 (Nov 2022 record low)</td><td class="n">510 t</td><td class="n">499 t</td><td class="n">2 – 12,500 t</td><td class="n">16.6 kg</td><td class="n">3,466 km²</td></tr>
+  <tr><td>2022 as observed</td><td class="n">447 t</td><td class="n">435 t</td><td class="n">1.6 – 11,500 t</td><td class="n">14.5 kg</td><td class="n">3,362 km² (mean)</td></tr>
+  <tr><td>4,192</td><td class="n">395 t</td><td class="n">382 t</td><td class="n">1.2 – 10,500 t</td><td class="n">12.8 kg</td><td class="n">3,155 km²</td></tr>
+  <tr><td>4,195</td><td class="n">271 t</td><td class="n">236 t</td><td class="n">0.8 – 8,000 t</td><td class="n">8.8 kg</td><td class="n">2,736 km²</td></tr>
+  <tr><td>4,198 (healthy range, low end)</td><td class="n">169 t</td><td class="n">135 t</td><td class="n">0.6 – 5,400 t</td><td class="n">5.5 kg</td><td class="n">2,100 km²</td></tr>
+  <tr><td>4,205 (healthy range, high end)</td><td class="n">45 t</td><td class="n">18 t</td><td class="n">0.2 – 1,500 t</td><td class="n">1.5 kg</td><td class="n">575 km²</td></tr>
+</table>
+<figure><img src="../../results/figures/report_scenarios.png"><figcaption><b>Figure 10. Arrival vs lake level, 2022 weather.</b> Lines: central parameters. Bands: 25–75% and 5–95% of the joint ensemble. Green: Strike Team healthy range. Arrival falls steadily as the lake rises, about 11× from record low to 4,205 ft. At high lake levels HYSPLIT gives up to 2.5× more than the ODE prototype. The remaining exposed ground is then mostly the outer bays, whose dust reaches the valley on curved paths the prototype could not follow.</figcaption></figure>
+<div class="warn"><b>How to read the scenarios.</b> The <i>relative</i> change with lake level is the more robust result. It comes from terrain, survey-based erodibility and HRRR winds, and holds across the ensemble. Arrival falls with each step up in lake level in all 200 members, and the record-low-to-4,205 ft ratio stays between 8× and 18× (median 12×), even though absolute amounts vary by thousands of times. The <i>absolute</i> tonnes depend on the uncertain emission law and could be much higher or lower.</div>
+
+<h2>9. Uncertainty: which component dominates</h2>
+<figure><img src="../../results/figures/report_uncertainty.png"><figcaption><b>Figure 11. Uncertainty by component, 2022 lake levels, 200 members each.</b> Emission parameters alone span about four orders of magnitude for both dust and arsenic. Chemistry (kriging variance of c<sub>As</sub> and the measured η range) changes arsenic by about 3× and does not affect dust mass. Transport uncertainty from particle size is about ±3% (Section 6) and is too small to show here.</figcaption></figure>
+<figure><img src="../../results/figures/report_sensitivity.png"><figcaption><b>Figure 12. Which emission inputs matter.</b> Rank correlation of each input with the dust total across the 200 emission members. The threshold friction velocity (ρ = −0.70) dominates, followed by the reference flux (+0.47), playa roughness (+0.40) and the wind exponent (−0.32). All four are stand-ins from a New Mexico playa. Great Salt Lake PI-SWERL measurements pin down exactly these four. Moisture, snow and the erodibility scale barely matter within their ranges.</figcaption></figure>
+
+<h2>10. Stage 4: validation against PM10 monitors</h2>
+<p><b>Design, fixed in advance.</b> We defined 30 PM10 episodes in 2022: an hourly reading of at least 150 µg/m³ at two or more of five Wasatch Front monitors, with readings within 6 hours merged into one episode. 10 episodes and 2 monitors were held out by a seeded random draw before any comparison. Nothing in the model is tuned to PM10, so every episode is out of sample, and the held-out split is reported as the guide specifies. For each episode, HYSPLIT ran directly with the central run's actual hourly emissions from 24 hours before the episode. We read the modeled lake-dust concentration (0–100 m layer, hourly) at each monitor.</p>
+<figure><img src="../../results/figures/report_validation.png"><figcaption><b>Figure 13. The 30 episodes.</b> Bars: observed PM10 peak from all sources. Dots: modeled peak lake-dust concentration at any monitor. The modeled lake dust is largest in the spring and June windstorms (April 28, May 3, May 19, June 17–19) and near zero for the July–September episodes. Those summer peaks probably come from other sources, such as wildfire smoke or other playas. Even at its highest, modeled lake dust is 1–2 orders of magnitude below the observed peaks.</figcaption></figure>
+<figure><img src="../../results/figures/report_validation_timeseries.png"><figcaption><b>Figure 14. One storm sequence in detail (log scale).</b> At the monitor with the most modeled lake dust, modeled pulses line up with periods of high observed PM10, but at a small fraction of it.</figcaption></figure>
+<table>
+  <tr><th style="width:30%">Subset</th><th class="n">Event-hours</th><th class="n">Event × monitor pairs</th><th class="n">Hourly correlation</th><th class="n">Pairs with modeled peak &gt; 50 µg/m³</th><th class="n">Median observed peak</th></tr>
+  <tr><td>All episodes, all monitors</td><td class="n">756</td><td class="n">142</td><td class="n">0.06</td><td class="n">0</td><td class="n">171 µg/m³</td></tr>
+  <tr><td>Held-out events</td><td class="n">189</td><td class="n">49</td><td class="n">0.07</td><td class="n">0</td><td class="n">157 µg/m³</td></tr>
+  <tr><td>Held-out monitors</td><td class="n">307</td><td class="n">58</td><td class="n">0.03</td><td class="n">0</td><td class="n">164 µg/m³</td></tr>
+  <tr><td>Held-out events at held-out monitors</td><td class="n">76</td><td class="n">20</td><td class="n">0.10</td><td class="n">0</td><td class="n">151 µg/m³</td></tr>
+</table>
+<p><b>What the validation says.</b> The model gets <i>when</i> lake dust should matter roughly right, but by itself it explains essentially none of the observed PM10 at these monitors. Two things are mixed together here, and PM10 alone cannot separate them. (1) Many episodes are not lake dust. The guide warns that PM10 cannot identify lake dust; that needs independent plume evidence per event, which we have not yet sourced. (2) On the lake-dust days, modeled emissions are very likely too low. The emission law runs on stand-in parameters whose uncertainty range spans about 6,000×. The right fix is to calibrate the emission law against Great Salt Lake field fluxes, as the guide requires, then re-run this validation unchanged. Tuning emissions until the monitors match would make the validation meaningless. Modeled arsenic has not yet been compared with independent filter or dust-trap chemistry.</p>
+
+<h2>11. What to take away</h2>
+<table>
+  <tr><th>Finding</th><th>Confidence</th><th>Why</th></tr>
+  <tr><td>Raising the lake sharply reduces dust and arsenic reaching the valley, by about 11× from record low to 4,205 ft</td><td><span class="tag ok">relatively robust</span></td><td>Driven by terrain, measured exposure and survey erodibility. Arrival falls with lake level in all 200 ensemble members, by 8–18× from record low to 4,205 ft.</td></tr>
+  <tr><td>Lake-dust arrival is concentrated in a handful of spring and early-summer storms</td><td><span class="tag ok">relatively robust</span></td><td>Follows from HRRR winds and the threshold form of the law. Matches the timing of the observed storm episodes.</td></tr>
+  <tr><td>Farmington Bay and the south-east shore supply most of the dust that reaches the valley</td><td><span class="tag ok">moderately robust</span></td><td>Field-survey hot spots plus HYSPLIT transport. Depends on the 2016–18 survey still describing the surface.</td></tr>
+  <tr><td>Airborne lake dust carries about 1.75× the sediment's arsenic (≈ 32 mg/kg)</td><td><span class="tag ok">moderately robust</span></td><td>Measured at 18 site pairs. Sediment arsenic itself is sparse (16 sites).</td></tr>
+  <tr><td>About 450 t of dust and 15 kg of arsenic reached the valley in 2022</td><td><span class="tag gap">low</span></td><td>Range about 2–11,500 t. Emission parameters are stand-ins, and validation suggests the true value is likely higher.</td></tr>
+  <tr><td>How much of observed valley PM10 is lake dust</td><td><span class="tag gap">not yet answerable</span></td><td>Needs calibrated emissions and independent plume evidence per episode.</td></tr>
+</table>
+<p><b>Bottom line.</b> The model is now a complete, checked implementation of the guide's chain, with HYSPLIT doing the transport, and it answers <i>relative</i> questions (lake level, season, source area) with reasonable confidence. It should not yet be used for <i>absolute</i> amounts. Those wait on one dataset, Great Salt Lake PI-SWERL flux measurements. Because transport is stored per zone, plugging those in later means re-running emissions and the ensemble in minutes, with no new HYSPLIT runs.</p>
+
+<h2>12. Gaps and next steps, in order of impact</h2>
+<ol>
+  <li><b>Great Salt Lake PI-SWERL flux tables</b> (Powell's University of Utah thesis or the Perry lab's survey data). These calibrate u*<sub>t</sub>, p and the reference flux, the four top-ranked inputs. They are also the guide's field labels for the machine-learning erodibility branch, and their depletion tests give independent S(0) and G. This is the single most valuable addition.</li>
+  <li><b>Independent plume evidence for each validation episode</b>, such as satellite imagery or back-trajectories, to tell lake-dust episodes from wildfire smoke and other sources before scoring.</li>
+  <li><b>Modeled arsenic vs independent chemistry.</b> Compare modeled arsenic deposition with the 17 USGS dust-trap samples over their collection periods.</li>
+  <li><b>More lakebed sediment arsenic</b>, especially in Bear River Bay and the north-arm interior, so the kriged c<sub>As</sub> can show spatial structure.</li>
+  <li><b>Confirm the provisional choices</b> in Appendix B.</li>
+</ol>
+
+<h2 class="newpage">Appendix A. Parameters</h2>
+<table>
+  <tr><th>Parameter</th><th class="n">Central</th><th class="n">Range</th><th>Units</th><th>Source</th><th>Status</th></tr>
+  <tr><td>u*<sub>t</sub> threshold friction velocity</td><td class="n">0.36</td><td class="n">0.24–0.56</td><td>m/s</td><td>PI-SWERL, Lordsburg Playa NM</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>p wind exponent</td><td class="n">3</td><td class="n">2–4</td><td>–</td><td>No GSL flux series</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>flux_ref reference PM10 flux</td><td class="n">3×10<sup>−6</sup></td><td class="n">5.6×10<sup>−7</sup>–2.5×10<sup>−5</sup></td><td>kg m<sup>−2</sup> s<sup>−1</sup></td><td>Lordsburg: crust to disturbed delta</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>u*<sub>ref</sub> of the reference flux</td><td class="n">0.8</td><td class="n">0.7–0.9</td><td>m/s</td><td>PI-SWERL top step</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>z0 playa roughness</td><td class="n">3×10<sup>−4</sup></td><td class="n">10<sup>−4</sup>–10<sup>−3</sup></td><td>m</td><td>Typical smooth playa</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>S(0) initial reservoir</td><td class="n">0.026</td><td class="n">0.005–0.1</td><td>kg m<sup>−2</sup></td><td>~1 mm loose layer, 2% PM10</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>G replenishment</td><td class="n">0.026</td><td class="n">0–0.1</td><td>kg m<sup>−2</sup> yr<sup>−1</sup></td><td>Unconstrained</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>φ survey scale</td><td class="n">1.23</td><td class="n">1.0–1.5</td><td>–</td><td>Perry et al. 2019, App. C</td><td><span class="tag ok">field data</span></td></tr>
+  <tr><td>Rain that wets the surface</td><td class="n">2</td><td class="n">1–5</td><td>mm</td><td>Linked to the 4% soil-moisture shut-off (GSL PI-SWERL)</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>Surface drying time</td><td class="n">3</td><td class="n">1–7</td><td>days</td><td>Assumed</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>Capillary fringe above water line</td><td class="n">0.3</td><td class="n">0.1–0.6</td><td>m</td><td>Assumed</td><td><span class="tag prov">stand-in</span></td></tr>
+  <tr><td>Snow depth cut-off</td><td class="n">0.01</td><td class="n">0.005–0.02</td><td>m</td><td>Assumed</td><td><span class="tag ok">in use</span></td></tr>
+  <tr><td>η arsenic enrichment</td><td class="n">1.75</td><td class="n">1.0–3.6</td><td>–</td><td>Perry App. G ÷ USGS sediment</td><td><span class="tag ok">measured</span></td></tr>
+  <tr><td>Particle diameter (HYSPLIT)</td><td class="n">5</td><td class="n">2.5–10</td><td>µm</td><td>PM10 dust; density 2.5 g/cm³</td><td><span class="tag ok">bounds</span></td></tr>
+</table>
+<p>HYSPLIT deposition uses its resistance scheme for particles, gravitational settling for the given diameter, and HYSPLIT's suggested wet scavenging (8×10<sup>−5</sup> in-cloud and below-cloud). Particles are released 10 m above the zone's lakebed over the zone's lakebed area, 50 per zone-hour per size, and followed for up to 24 hours. In the pilot, every valley entry happened within 6 hours.</p>
+
+<h2>Appendix B. Provisional choices (yours to confirm)</h2>
+<table>
+  <tr><th>Choice</th><th>Current setting</th><th>Why it matters</th></tr>
+  <tr><td>Valley boundary</td><td>Salt Lake County minus the lakebed</td><td>Defines "entering the valley" for R</td></tr>
+  <tr><td>Bays' lake level</td><td>Farmington and Bear River Bays use the south-arm gauge</td><td>Exposure of the two main hot-spot areas</td></tr>
+  <tr><td>Size treatment</td><td>Uncertainty bounds (2.5 / 5 / 10 µm), not particle bins</td><td>Transport and enrichment by size; effect ±3%</td></tr>
+  <tr><td>Replenishment</td><td>Only on exposed lakebed</td><td>Reservoir growth (Section 5)</td></tr>
+  <tr><td>Valley entry height</td><td>Any height (pilot entries were all below 1,250 m above ground)</td><td>Whether dust passing high overhead counts</td></tr>
+  <tr><td>Source zones</td><td>10 km (5 km tested: under 2 points different)</td><td>Transport resolution</td></tr>
+  <tr><td>Simulation year</td><td>2022</td><td>Weather; record-low lake</td></tr>
+  <tr><td>Scenario levels</td><td>4,188.5 / 4,192 / 4,195 / 4,198 / 4,205 ft, gauge datum, both arms</td><td>Stage 5</td></tr>
+</table>
+
+<h2>Appendix C. Verification performed</h2>
+<table>
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Wet area vs USGS elevation–area tables</td><td>Within 0.15% at all levels, by basin</td></tr>
+  <tr><td>Datum conversion</td><td>Unit-tested (NAVD88 = NGVD29 + 3.476 ft)</td></tr>
+  <tr><td>ODE mass balance</td><td>Closes to 10<sup>−9</sup></td></tr>
+  <tr><td>HRRR → HYSPLIT files</td><td>Read by HYSPLIT tools; positions correct at 4 sites; values physically right</td></tr>
+  <tr><td>First-entry tracking</td><td>HYSPLIT's renumbering rule decoded and checked every minute; minute resolution (hourly would miss 15%)</td></tr>
+  <tr><td>Zone shortcut vs direct HYSPLIT</td><td>Median −0.7% over 17 episodes with &gt;1 t</td></tr>
+  <tr><td>Releasing only in windy hours</td><td>Zero emission outside them in the central run</td></tr>
+  <tr><td>Grid resolution</td><td>Exposure identical at 0.5 / 1 / 2 km; 5 vs 10 km zones within 2 points</td></tr>
+  <tr><td>Perry report parsing</td><td>Category counts within 5% of the report; hot spots 18% low (covered by φ scale)</td></tr>
+  <tr><td>Automated tests</td><td>16 pass (datums, exposure, ODE, model chain, transfer, ARL format, superposition, empty zones)</td></tr>
+</table>
+
+<h2>Appendix D. Reproducing the results</h2>
+<ol>
+  <li><code>scripts/stage1_exposure.py</code>: terrain, basins, exposure (needs the USGS terrain files).</li>
+  <li><code>scripts/fetch_hrrr.py</code>: hourly HRRR on the 1 km lattice for emissions.</li>
+  <li><code>scripts/extract_perry_report.py</code>: survey and PM10 arsenic tables from the Perry report PDF.</li>
+  <li><code>scripts/run_hysplit_transfer.py</code>: HYSPLIT unit-source runs, with HRRR streamed. It can run as several date ranges at once (<code>--start/--end</code>), resumes after interruption, and <code>--check</code> confirms completeness.</li>
+  <li><code>scripts/run_episodes.py</code>: Stage 4 direct runs and scores. <code>--score-only</code> reuses saved runs.</li>
+  <li><code>scripts/run_model.py --ensemble 200 --transport hysplit</code>: central run, scenarios and ensembles, about 25 minutes on 8 cores.</li>
+  <li><code>scripts/make_report_figures.py</code>: the figures in this report.</li>
+</ol>
+<p>HYSPLIT v5.4.2 is NOAA's Mac build, installed in <code>~/hysplit</code>. Data, results and logs are not in git. The scripts regenerate them.</p>
+
+</body>
+</html>

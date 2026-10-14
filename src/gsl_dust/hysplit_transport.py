@@ -23,7 +23,7 @@ class Transfer:
         ent = ((pd.to_datetime(t.entry, utc=True) - h0) / pd.Timedelta(hours=1)).to_numpy().astype(np.int64)
         keep = (rel >= 0) & (rel < len(hours)) & (ent >= 0)
         self.hours, self.n_zones = hours, n_zones
-        self.zone = t.zone.to_numpy()[keep]
+        self.zone = t.zone.to_numpy().astype(np.int64)[keep]  # empty per-zone files can make this column float
         self.rel, self.ent = rel[keep], ent[keep]
         self.mass = t.mass.to_numpy()[keep]
         # which (zone, release hour) pairs HYSPLIT has covered

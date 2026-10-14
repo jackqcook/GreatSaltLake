@@ -56,7 +56,14 @@ def main(workers=6):
                      "R_superposition_kg": float(r_sup[(r_sup.index >= t0) & (r_sup.index < t1)].sum())})
     pd.DataFrame(rows).to_csv(TABLES / "superposition_check.csv", index=False)
 
-    # model vs monitors
+    score(conc, design)
+
+
+
+def score(conc, design):
+    """Model vs monitors, from the saved episode concentrations."""
+    conc = conc.copy()
+    conc["time"] = pd.to_datetime(conc.time, utc=True, format="ISO8601")
     obs = pd.read_parquet(ROOT / "data" / "raw" / "aqs" / "pm10_2022_wasatch.parquet")
     obs["time"] = pd.to_datetime(obs.time, utc=True)
     m = conc.merge(obs[["site_id", "time", "pm10"]], on=["site_id", "time"], how="inner")
@@ -84,4 +91,8 @@ def main(workers=6):
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--score-only" in sys.argv:  # reuse saved episode runs
+        score(pd.read_csv(TABLES / "episode_model_conc.csv"), episode_runs.episodes())
+    else:
+        main()
