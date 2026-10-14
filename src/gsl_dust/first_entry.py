@@ -185,8 +185,10 @@ class StreamTracker:
                                   int(pollutant[k]) if pollutant is not None else 1))
 
     def result(self):
-        if not self.rows:
-            return pd.DataFrame(columns=["release", "entry", "agl", "mass", "pollutant"])
+        if not self.rows:  # no particle reached the valley: typed empty frame
+            return pd.DataFrame({"release": pd.DatetimeIndex([], tz="UTC"), "entry": pd.DatetimeIndex([], tz="UTC"),
+                                 "agl": pd.Series([], dtype=float), "mass": pd.Series([], dtype=float),
+                                 "pollutant": pd.Series([], dtype=int)})
         df = pd.DataFrame(self.rows, columns=["release", "entry", "agl", "mass", "pollutant"])
         df["release"] = pd.DatetimeIndex(df.release).floor("h")
         return df

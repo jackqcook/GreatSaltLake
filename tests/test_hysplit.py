@@ -42,3 +42,23 @@ def test_superposition_is_linear_and_lagged():
     assert np.allclose(r, [0, 5.0, 2.5, 2.0, 0, 0])
     assert np.allclose(tr.arrival(3 * e), 3 * r)
     assert np.isclose(tr.frac[0, 0], 0.75) and np.isclose(tr.frac[1, 1], 0.1)
+
+
+def test_zone_with_no_valley_entries_aggregates_to_empty_table():
+    from shapely.geometry import box
+    from gsl_dust import first_entry, hysplit_run
+    tr = first_entry.StreamTracker(box(0, 0, 1, 1))  # a valley no particle can reach
+    fe = tr.result()
+    fe["entry"] = fe["entry"].dt.floor("h")  # the step that failed on an untyped empty frame
+    fe["diameter_um"] = np.asarray(hysplit_run.DIAMETERS_UM, dtype=float)[fe.pollutant.to_numpy(int) - 1]
+    agg = fe.groupby(["diameter_um", "release", "entry"]).agg(mass=("mass", "sum")).reset_index()
+    assert len(agg) == 0
+
+
+def test_transfer_accepts_float_zone_column():
+    """Concatenating empty per-zone files makes the zone column float."""
+    hours = pd.date_range("2022-05-01", periods=4, freq="h", tz="UTC")
+    table = pd.DataFrame({"zone": [0.0, 1.0], "release": hours[[0, 1]], "entry": hours[[1, 2]], "mass": [0.5, 0.2]})
+    tr = hysplit_transport.Transfer(hours, 2, table)
+    e = np.ones((4, 2))
+    assert np.allclose(tr.arrival(e), [0, 0.5, 0.2, 0])

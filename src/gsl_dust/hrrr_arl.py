@@ -8,6 +8,7 @@ never written to disk. Winds stay grid-relative, as ARL expects.
 Like hrrr.py, each hour uses the 1-hour forecast from the previous cycle so the
 0-1 h precipitation shares the valid time. Upper air comes from the pressure-level
 file (25 hPa spacing); surface fields from the surface file."""
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 import threading
@@ -173,7 +174,7 @@ def write_day(day: pd.Timestamp, workers=16, log=print):
     path = ARL_DIR / f"hrrr_utah_{day:%Y%m%d}.arl"
     if path.exists():
         return path, 0
-    tmp = path.with_suffix(".part")
+    tmp = path.with_suffix(f".part{os.getpid()}")  # private temp file: parallel runs may fetch the same day
     total = 0
     with ThreadPoolExecutor(workers) as pool, open(tmp, "wb") as fh:
         for h in range(24):
@@ -181,6 +182,6 @@ def write_day(day: pd.Timestamp, workers=16, log=print):
             levels, fields, n = fetch_hour(valid, pool)
             total += n
             arl.write_period(fh, valid, _crop.grid, levels, fields, forecast=1)
-    tmp.rename(path)
+    os.replace(tmp, path)  # atomic; a parallel run that finished first is simply overwritten with identical data
     log(f"{day:%Y-%m-%d}: {total / 1e9:.2f} GB fetched, {path.stat().st_size / 1e6:.0f} MB kept")
     return path, total
