@@ -4,6 +4,7 @@ Reads the outputs of run_model.py (HYSPLIT transport), run_episodes.py,
 extract_perry_report.py and the pilot/resolution tables, and writes
 results/figures/report_*.png."""
 import json
+import shutil
 
 import matplotlib
 matplotlib.use("Agg")
@@ -250,6 +251,18 @@ def fig_validation():
     return v
 
 
+README_FIGURES = ["scenarios", "seasonal", "source_maps", "transport_checks", "arsenic", "validation", "sensitivity"]
+
+
+def copy_for_readme():
+    """The README shows a few figures; results/ is not in git, so keep copies in docs/figures."""
+    dest = ROOT / "docs" / "figures"
+    dest.mkdir(exist_ok=True)
+    for name in README_FIGURES:
+        shutil.copy(FIGURES / f"report_{name}.png", dest / f"{name}.png")
+    shutil.copy(FIGURES / "phi_surface_map.png", dest / "erodibility_map.png")
+
+
 def main():
     r = runs()
     fig_arsenic(); fig_transport_checks(); fig_superposition()
@@ -262,6 +275,7 @@ def main():
     print((monthly / monthly.sum() * 100).round(1).T.to_string())
     print(rho.round(2).to_string())
     print(v.round(2).to_string())
+    copy_for_readme()
 
 
 if __name__ == "__main__":
