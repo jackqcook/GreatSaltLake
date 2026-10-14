@@ -1,6 +1,8 @@
 # Great Salt Lake dust model
 
-How much dust and arsenic blows off the exposed bed of the Great Salt Lake and into the Salt Lake Valley, and how that changes with the lake level.
+The Great Salt Lake holds a special place in my heart. It is an important part to the ecosystem where I live, and the lake effect produces the best snow in the world (very important). As severe drought continues to impact the Western USA, many have worried about the GSL and how lower water elevation levels would impact the Salt Lake Valley, where nearly 1 million people live. For this reason, I was curious to know just how dangerous lower lake levels would be with exposed arsenic blowing into the valley. 
+
+The question then is: How much dust and arsenic blows off the exposed bed of the Great Salt Lake and into the Salt Lake Valley, and how does that changes with the lake level? 
 
 The model follows each 1 km patch of lakebed through the year: whether the water has left it, whether it's dry, crusted or snow-covered, and whether the wind is strong enough to lift dust off it. The lifted dust then goes into NOAA's HYSPLIT dispersion model, driven by hourly 3 km HRRR weather, which follows every particle until it enters the valley, settles out, or leaves the region. The outputs are dust and arsenic **arriving in the valley**, in total and hour by hour. It stops there and does not estimate health effects.
 
